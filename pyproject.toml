@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "jarvis"
 version = "0.1.0"
 description = "Jarvis, un assistant personnel en français propulsé par Claude"
-readme = "README.md"
+readme = "JARVIS.md"
 requires-python = ">=3.10"
 dependencies = ["anthropic>=1.15"]
 

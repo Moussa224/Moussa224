@@ -25,7 +25,7 @@ def _api_message(exc: anthropic.APIStatusError) -> str:
 
 def describe_error(exc: Exception) -> str:
     if is_missing_credentials(exc):
-        return "Aucune clé API. Définissez ANTHROPIC_API_KEY (voir le README)."
+        return "Aucune clé API. Définissez ANTHROPIC_API_KEY (voir JARVIS.md)."
     if isinstance(exc, JarvisRefusal):
         return "Je ne peux pas répondre à cette demande."
     if isinstance(exc, JarvisTruncated):
