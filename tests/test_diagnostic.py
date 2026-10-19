@@ -95,6 +95,22 @@ def test_a_bad_model_or_tool_definition_is_reported_with_the_api_message():
     assert not ready and "Erreur de l'API (404) : model: claude-inconnu" in report
 
 
+def test_a_key_without_a_workspace_gets_an_actionable_message():
+    """Une clé non liée à un workspace est refusée (400) : le message doit dire quoi faire."""
+    api = FakeApi(
+        api_error(
+            anthropic.BadRequestError,
+            400,
+            "anthropic-workspace-id is required when authenticating with an identity-linked API key",
+        )
+    )
+
+    ready, report = run(api)
+
+    assert not ready and "recréez-la en choisissant un workspace" in report
+    assert "platform.claude.com/settings/keys" in report
+
+
 def test_refused_web_search_is_a_warning_not_a_failure():
     api = FakeApi(None, api_error(anthropic.BadRequestError, 400, "web_search non autorisé"))
 

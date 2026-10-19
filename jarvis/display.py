@@ -28,6 +28,11 @@ def describe_error(exc: Exception) -> str:
         return "Clé API refusée. Vérifiez ANTHROPIC_API_KEY."
     if isinstance(exc, anthropic.RateLimitError):
         return "Trop de requêtes. Réessayez dans un instant."
+    if isinstance(exc, anthropic.BadRequestError) and "anthropic-workspace-id" in str(exc.message):
+        return (
+            "Votre clé API peut servir sur plusieurs workspaces : recréez-la en choisissant un workspace "
+            "(platform.claude.com/settings/keys)."
+        )
     if isinstance(exc, anthropic.APIStatusError):
         return f"Erreur de l'API ({exc.status_code}) : {exc.message}"
     if isinstance(exc, anthropic.APIConnectionError):

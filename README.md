@@ -27,6 +27,8 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 jarvis --diagnostic                    # vérifie que tout fonctionne vraiment
 ```
 
+**Obtenir une clé API** : connectez-vous (ou créez un compte) sur [platform.claude.com](https://platform.claude.com), ouvrez [Paramètres > API keys](https://platform.claude.com/settings/keys) et cliquez sur **Create key**. Donnez-lui un nom, choisissez une expiration, laissez **Linked account** sur vous-même et **choisissez un workspace** : une clé non liée à un workspace est refusée par l'API (erreur 400). La console n'affiche la clé complète (elle commence par `sk-ant-`) qu'une seule fois : copiez-la tout de suite, ne la mettez jamais dans git ni dans un message. L'abonnement Claude.ai ne fournit pas de clé ; l'API est facturée à part.
+
 `jarvis --diagnostic` envoie, avec votre clé, les mêmes requêtes que Jarvis (même modèle, même prompt, mêmes outils) limitées à 16 jetons de sortie, donc pour un coût négligeable. Il vérifie la clé, le modèle, la définition des outils, la recherche web et la voix, et dit clairement ce qui ne va pas. Lancez-le en premier.
 
 La recherche web doit être activée pour votre organisation dans la Console Anthropic. Sinon, Jarvis le détecte, prévient, et continue sans (ou utilisez `--sans-web`).
