@@ -1,0 +1,2 @@
+# Un script Windows doit garder ses fins de ligne CRLF, tel quel dans le ZIP.
+*.bat -text

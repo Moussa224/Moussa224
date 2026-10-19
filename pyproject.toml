@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis"
+version = "0.1.0"
+description = "Jarvis, un assistant personnel en français propulsé par Claude"
+readme = "JARVIS.md"
+requires-python = ">=3.10"
+dependencies = ["anthropic>=1.15"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff"]
+
+[project.scripts]
+jarvis = "jarvis.__main__:main"
+
+[tool.setuptools]
+packages = ["jarvis"]
+
+[tool.setuptools.package-data]
+jarvis = ["static/*.html"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
