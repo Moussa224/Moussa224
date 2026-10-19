@@ -6,6 +6,8 @@ lancer une commande demandent toujours son accord ; lire hors du dossier courant
 aussi.
 """
 
+import os
+import signal
 import subprocess
 from pathlib import Path
 
@@ -83,22 +85,43 @@ def guard_write(path: str, content: str) -> str:
     return f"{verb} le fichier {target} ({len(content)} caractères)"
 
 
+def _kill_tree(process: subprocess.Popen) -> None:
+    """Arrête la commande et tout ce qu'elle a lancé (le shell seul ne suffit pas)."""
+    try:
+        if os.name == "posix":
+            os.killpg(process.pid, signal.SIGKILL)  # le processus est chef de son propre groupe
+        else:
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True)
+    except (ProcessLookupError, PermissionError):
+        pass  # déjà terminé
+    try:
+        process.communicate(timeout=5)  # récupère le processus et ferme les tubes
+    except subprocess.TimeoutExpired:
+        process.kill()
+
+
 def run_command(command: str, timeout: int = DEFAULT_TIMEOUT) -> str:
     timeout = min(max(int(timeout), 1), MAX_TIMEOUT)
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        errors="replace",
+        stdin=subprocess.DEVNULL,
+        start_new_session=os.name == "posix",  # groupe à part : on peut tout arrêter d'un coup
+    )
     try:
-        done = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=timeout,
-            stdin=subprocess.DEVNULL,
-        )
+        stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        _kill_tree(process)
         raise ToolError(f"Commande interrompue après {timeout} s.")
-    output = _clip((done.stdout + done.stderr).strip(), MAX_OUTPUT_CHARS)
-    return f"Code de sortie : {done.returncode}\n{output}".rstrip()
+    except BaseException:  # Ctrl-C compris : ne rien laisser tourner derrière nous
+        _kill_tree(process)
+        raise
+    output = _clip((stdout + stderr).strip(), MAX_OUTPUT_CHARS)
+    return f"Code de sortie : {process.returncode}\n{output}".rstrip()
 
 
 def guard_command(command: str, timeout: int = DEFAULT_TIMEOUT) -> str:

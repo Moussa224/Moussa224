@@ -1,4 +1,7 @@
+import os
+import subprocess
 import sys
+import time
 
 import pytest
 
@@ -158,3 +161,39 @@ def test_run_command_cannot_read_stdin(workdir):
 
 def test_invalid_timeout_is_an_argument_error(workdir):
     assert tools.execute("run_command", {"command": "echo a", "timeout": "vite"}, confirm=yes)[1] is True
+
+
+@pytest.mark.skipif(os.name != "posix", reason="groupes de processus POSIX")
+def test_a_timed_out_command_leaves_nothing_running_behind(workdir):
+    # `&& true` garde le shell en parent : le vrai travail tourne dans un processus enfant.
+    slow = (
+        f'"{sys.executable}" -c "import time, pathlib; time.sleep(1.5); '
+        f'pathlib.Path(\'survivant.txt\').write_text(\'vivant\')" && true'
+    )
+
+    text, is_error = tools.execute("run_command", {"command": slow, "timeout": 1}, confirm=yes)
+    time.sleep(1.5)  # laisse à un éventuel survivant le temps d'agir
+
+    assert is_error and "interrompue" in text
+    assert not (workdir / "survivant.txt").exists(), "la commande a continué après son interruption"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="groupes de processus POSIX")
+def test_ctrl_c_stops_the_running_command_too(workdir, monkeypatch):
+    seen = []
+    original = subprocess.Popen.communicate
+    interrupted = []
+
+    def communicate(self, *args, **kwargs):
+        seen.append(self)
+        if not interrupted:
+            interrupted.append(True)
+            raise KeyboardInterrupt
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess.Popen, "communicate", communicate)
+
+    with pytest.raises(KeyboardInterrupt):
+        tools.execute("run_command", {"command": "sleep 30 && true"}, confirm=yes)
+
+    assert seen[0].poll() is not None, "la commande tourne encore après Ctrl-C"
