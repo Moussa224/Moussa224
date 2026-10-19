@@ -167,16 +167,20 @@ class Jarvis:
 
         raise JarvisLoopLimit()
 
+    def request(self, messages: list[dict], max_tokens: int = MAX_TOKENS) -> dict:
+        """Paramètres exacts d'une requête à l'API (aussi utilisés par le diagnostic)."""
+        return {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "system": self.system,
+            "tools": tools.TOOLS + (WEB_TOOLS if self.web else []),
+            "messages": messages,
+            "output_config": {"effort": "medium"},
+            "cache_control": {"type": "ephemeral"},
+        }
+
     def _stream_once(self):
-        with self.client.messages.stream(
-            model=self.model,
-            max_tokens=MAX_TOKENS,
-            system=self.system,
-            tools=tools.TOOLS + (WEB_TOOLS if self.web else []),
-            messages=self.messages,
-            output_config={"effort": "medium"},
-            cache_control={"type": "ephemeral"},
-        ) as stream:
+        with self.client.messages.stream(**self.request(self.messages)) as stream:
             for text in stream.text_stream:
                 self.on_text(text)
             return stream.get_final_message()

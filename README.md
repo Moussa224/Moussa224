@@ -22,22 +22,27 @@ Jarvis est un assistant personnel en français, propulsé par Claude (`claude-op
 ### Installation
 
 ```bash
-pip install -r requirements.txt
+pip install -e .                       # Python 3.10+ ; installe la commande `jarvis`
 export ANTHROPIC_API_KEY="sk-ant-..."
+jarvis --diagnostic                    # vérifie que tout fonctionne vraiment
 ```
 
+`jarvis --diagnostic` envoie, avec votre clé, les mêmes requêtes que Jarvis (même modèle, même prompt, mêmes outils) limitées à 16 jetons de sortie, donc pour un coût négligeable. Il vérifie la clé, le modèle, la définition des outils, la recherche web et la voix, et dit clairement ce qui ne va pas. Lancez-le en premier.
+
 La recherche web doit être activée pour votre organisation dans la Console Anthropic. Sinon, Jarvis le détecte, prévient, et continue sans (ou utilisez `--sans-web`).
+
+**Lancez `jarvis` depuis le dossier de votre projet** : c'est son « dossier courant », où il peut lire sans demander (voir Sécurité).
 
 ### Utilisation
 
 ```bash
-python -m jarvis                                   # conversation interactive
-python -m jarvis "Quelle heure est-il à Tokyo ?"   # une seule question
-python -m jarvis --voix                            # avec réponse vocale
-python -m jarvis --continuer                       # reprend la dernière conversation
-python -m jarvis --web                             # interface web (s'ouvre dans le navigateur)
-python -m jarvis --modele claude-sonnet-5-5        # modèle plus économique
-python -m jarvis --sans-web                        # sans accès au web
+jarvis                                   # conversation interactive
+jarvis "Quelle heure est-il à Tokyo ?"   # une seule question
+jarvis --voix                            # avec réponse vocale
+jarvis --continuer                       # reprend la dernière conversation
+jarvis --web                             # interface web (s'ouvre dans le navigateur)
+jarvis --modele claude-sonnet-5-5        # modèle plus économique
+jarvis --sans-web                        # sans accès au web
 ```
 
 Dans la conversation : `/reset` oublie l'échange en cours, `/aide` rappelle les commandes, `/quitter` (ou Ctrl-D) ferme Jarvis. Ctrl-C interrompt une réponse.
@@ -54,10 +59,10 @@ Exemples :
 ### Interface web
 
 ```bash
-python -m jarvis --web                       # affiche un lien privé et ouvre le navigateur
-python -m jarvis --web --port 9000           # autre port (8765 par défaut)
-python -m jarvis --web --sans-navigateur     # n'ouvre rien, copiez le lien vous-même
-python -m jarvis --web --continuer           # reprend la dernière conversation
+jarvis --web                       # affiche un lien privé et ouvre le navigateur
+jarvis --web --port 9000           # autre port (8765 par défaut)
+jarvis --web --sans-navigateur     # n'ouvre rien, copiez le lien vous-même
+jarvis --web --continuer           # reprend la dernière conversation
 ```
 
 La page affiche la réponse au fil de l'eau, montre les outils utilisés, et ouvre une fenêtre **Autorisation requise** (« Refuser » est le choix par défaut, Échap refuse) quand Jarvis veut écrire un fichier ou lancer une commande. Sans réponse au bout de 2 minutes, l'action est refusée. La page s'adapte aux petits écrans, mais le serveur n'est volontairement pas accessible depuis le réseau (donc pas depuis un téléphone).
@@ -89,7 +94,9 @@ Dans `jarvis/tools.py` : écrire la fonction (elle renvoie du texte ou lève `To
 ### Tests
 
 ```bash
+pip install -e ".[dev]"
 python -m pytest
+ruff check .
 ```
 
 Les tests n'appellent pas l'API : l'agent est testé avec un faux client, le serveur web avec de vraies requêtes HTTP, et les garde-fous de sécurité sont vérifiés (les supprimer fait échouer les tests).

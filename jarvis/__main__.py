@@ -6,7 +6,7 @@ import sys
 
 import anthropic
 
-from . import voice
+from . import diagnostic, voice
 from .agent import DEFAULT_MODEL, Jarvis
 from .display import TURN_ERRORS, describe_error, is_missing_credentials, short
 
@@ -96,7 +96,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--web", action="store_true", help="ouvre l'interface web locale")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"port de l'interface web ({DEFAULT_PORT})")
     parser.add_argument("--sans-navigateur", action="store_true", help="n'ouvre pas le navigateur avec --web")
+    parser.add_argument("--diagnostic", action="store_true", help="vérifie la clé API, le modèle et les outils")
     args = parser.parse_args(argv)
+
+    if args.diagnostic:
+        return 0 if diagnostic.run(args.modele, web=not args.sans_web) else 1
 
     if args.web:
         from . import web  # import tardif : le terminal n'a pas besoin du serveur
