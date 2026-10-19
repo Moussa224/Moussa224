@@ -1,4 +1,4 @@
-"""Outils locaux que Jarvis peut appeler : date/heure, calculatrice, notes."""
+"""Outils locaux de Jarvis : date/heure, calculatrice, notes, mémoire, ordinateur."""
 
 import ast
 import json
@@ -7,7 +7,11 @@ import operator
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from . import computer
+from .errors import ToolError
 
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 MOIS = [
@@ -17,10 +21,6 @@ MOIS = [
 
 MAX_EXPRESSION_LENGTH = 200
 MAX_EXPONENT = 1000
-
-
-class ToolError(Exception):
-    """Erreur lisible renvoyée à Claude avec `is_error: true`."""
 
 
 def jarvis_home() -> Path:
@@ -105,139 +105,214 @@ def calculate(expression: str) -> str:
     return str(result)
 
 
-# --- Notes -----------------------------------------------------------------
+# --- Listes persistantes (notes et mémoire) --------------------------------
 
 
-def _notes_path() -> Path:
-    return jarvis_home() / "notes.json"
-
-
-def _load_notes() -> list[dict]:
-    path = _notes_path()
+def _load(filename: str) -> list[dict]:
+    path = jarvis_home() / filename
     if not path.exists():
         return []
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
-        raise ToolError(f"Le fichier de notes {path} est corrompu.")
+        raise ToolError(f"Le fichier {path} est corrompu.")
 
 
-def _save_notes(notes: list[dict]) -> None:
-    path = _notes_path()
+def _save(filename: str, items: list[dict]) -> None:
+    path = jarvis_home() / filename
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(notes, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def add_note(text: str) -> str:
+def _append(filename: str, text: str) -> int:
     text = text.strip()
     if not text:
-        raise ToolError("La note est vide.")
-    notes = _load_notes()
-    note_id = max((n["id"] for n in notes), default=0) + 1
-    notes.append(
+        raise ToolError("Le texte est vide.")
+    items = _load(filename)
+    item_id = max((i["id"] for i in items), default=0) + 1
+    items.append(
         {
-            "id": note_id,
+            "id": item_id,
             "text": text,
             "created": datetime.now().astimezone().isoformat(timespec="seconds"),
         }
     )
-    _save_notes(notes)
-    return f"Note {note_id} enregistrée."
+    _save(filename, items)
+    return item_id
+
+
+def _remove(filename: str, item_id: int, label: str) -> None:
+    items = _load(filename)
+    remaining = [i for i in items if i["id"] != item_id]
+    if len(remaining) == len(items):
+        raise ToolError(f"Aucun élément « {label} » avec l'identifiant {item_id}.")
+    _save(filename, remaining)
+
+
+def add_note(text: str) -> str:
+    return f"Note {_append('notes.json', text)} enregistrée."
 
 
 def list_notes() -> str:
-    notes = _load_notes()
+    notes = _load("notes.json")
     if not notes:
         return "Aucune note."
     return "\n".join(f"{n['id']}. [{n['created']}] {n['text']}" for n in notes)
 
 
 def delete_note(id: int) -> str:
-    notes = _load_notes()
-    remaining = [n for n in notes if n["id"] != id]
-    if len(remaining) == len(notes):
-        raise ToolError(f"Aucune note avec l'identifiant {id}.")
-    _save_notes(remaining)
+    _remove("notes.json", id, "note")
     return f"Note {id} supprimée."
+
+
+def remember(fact: str) -> str:
+    return f"Retenu (souvenir {_append('memory.json', fact)}). Je m'en souviendrai aux prochaines sessions."
+
+
+def forget(id: int) -> str:
+    _remove("memory.json", id, "souvenir")
+    return f"Souvenir {id} oublié."
+
+
+def load_memories() -> list[dict]:
+    """Souvenirs durables, injectés dans le prompt système au démarrage."""
+    try:
+        return _load("memory.json")
+    except ToolError:
+        return []
 
 
 # --- Déclaration pour l'API ------------------------------------------------
 
+
+def _tool(name: str, description: str, properties: dict | None = None, required: list | None = None):
+    schema = {"type": "object", "properties": properties or {}}
+    if required:
+        schema["required"] = required
+    return {"name": name, "description": description, "input_schema": schema}
+
+
+_TEXT = {"type": "string"}
+
 TOOLS = [
-    {
-        "name": "get_datetime",
-        "description": (
-            "Donne la date et l'heure actuelles. À utiliser pour toute question "
-            "sur le jour, la date ou l'heure, car tu ne les connais pas."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "timezone": {
-                    "type": "string",
-                    "description": "Fuseau IANA, ex. Europe/Paris. Vide = heure locale.",
-                }
+    _tool(
+        "get_datetime",
+        "Donne la date et l'heure actuelles. À utiliser pour toute question sur le "
+        "jour, la date ou l'heure, car tu ne les connais pas.",
+        {"timezone": {**_TEXT, "description": "Fuseau IANA, ex. Europe/Paris. Vide = heure locale."}},
+    ),
+    _tool(
+        "calculate",
+        "Évalue une expression mathématique : + - * / // % **, parenthèses, sqrt, "
+        "sin, cos, tan, log, log10, exp, abs, round, min, max, pi, e.",
+        {"expression": {**_TEXT, "description": "Ex. 'sqrt(2) * 3'."}},
+        ["expression"],
+    ),
+    _tool(
+        "add_note",
+        "Enregistre une note de l'utilisateur (idée, rappel, liste de courses…).",
+        {"text": {**_TEXT, "description": "Contenu de la note."}},
+        ["text"],
+    ),
+    _tool("list_notes", "Liste toutes les notes enregistrées avec leur identifiant."),
+    _tool(
+        "delete_note",
+        "Supprime une note à partir de son identifiant.",
+        {"id": {"type": "integer", "description": "Identifiant de la note."}},
+        ["id"],
+    ),
+    _tool(
+        "remember",
+        "Retient durablement un fait sur l'utilisateur (préférence, habitude, "
+        "contexte personnel) pour les sessions futures. À distinguer des notes : "
+        "un souvenir sert à mieux le connaître, pas à garder une information à lui rendre.",
+        {"fact": {**_TEXT, "description": "Le fait, formulé clairement. Ex. « Préfère être tutoyé »."}},
+        ["fact"],
+    ),
+    _tool(
+        "forget",
+        "Efface un souvenir à partir de son identifiant (visible dans ta mémoire).",
+        {"id": {"type": "integer", "description": "Identifiant du souvenir."}},
+        ["id"],
+    ),
+    _tool(
+        "list_directory",
+        "Liste le contenu d'un dossier (dossiers d'abord, suffixés par /).",
+        {"path": {**_TEXT, "description": "Chemin du dossier. Défaut : dossier courant."}},
+    ),
+    _tool(
+        "read_file",
+        "Lit un fichier texte (tronqué à 20 000 caractères).",
+        {"path": {**_TEXT, "description": "Chemin du fichier."}},
+        ["path"],
+    ),
+    _tool(
+        "write_file",
+        "Crée ou écrase un fichier texte. L'utilisateur doit approuver chaque écriture.",
+        {
+            "path": {**_TEXT, "description": "Chemin du fichier."},
+            "content": {**_TEXT, "description": "Contenu complet."},
+        },
+        ["path", "content"],
+    ),
+    _tool(
+        "run_command",
+        "Exécute une commande shell sur l'ordinateur de l'utilisateur et renvoie sa "
+        "sortie. L'utilisateur doit approuver chaque commande ; n'en propose jamais "
+        "de destructive sans qu'il l'ait demandé.",
+        {
+            "command": {**_TEXT, "description": "Commande shell."},
+            "timeout": {
+                "type": "integer",
+                "description": "Délai maximal en secondes (60 par défaut, 300 maximum).",
             },
         },
-    },
-    {
-        "name": "calculate",
-        "description": (
-            "Évalue une expression mathématique : + - * / // % **, parenthèses, "
-            "sqrt, sin, cos, tan, log, log10, exp, abs, round, min, max, pi, e."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "expression": {"type": "string", "description": "Ex. 'sqrt(2) * 3'."}
-            },
-            "required": ["expression"],
-        },
-    },
-    {
-        "name": "add_note",
-        "description": "Enregistre une note durable (idée, rappel, information à retenir).",
-        "input_schema": {
-            "type": "object",
-            "properties": {"text": {"type": "string", "description": "Contenu de la note."}},
-            "required": ["text"],
-        },
-    },
-    {
-        "name": "list_notes",
-        "description": "Liste toutes les notes enregistrées avec leur identifiant.",
-        "input_schema": {"type": "object", "properties": {}},
-    },
-    {
-        "name": "delete_note",
-        "description": "Supprime une note à partir de son identifiant.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"id": {"type": "integer", "description": "Identifiant de la note."}},
-            "required": ["id"],
-        },
-    },
+        ["command"],
+    ),
 ]
 
-_HANDLERS = {
+_HANDLERS: dict[str, Callable[..., str]] = {
     "get_datetime": get_datetime,
     "calculate": calculate,
     "add_note": add_note,
     "list_notes": list_notes,
     "delete_note": delete_note,
+    "remember": remember,
+    "forget": forget,
+    "list_directory": computer.list_directory,
+    "read_file": computer.read_file,
+    "write_file": computer.write_file,
+    "run_command": computer.run_command,
 }
 
+# Gardes : même signature que l'outil, renvoient la question à poser (ou None).
+_GUARDS: dict[str, Callable[..., str | None]] = {
+    "list_directory": computer.guard_list,
+    "read_file": computer.guard_read,
+    "write_file": computer.guard_write,
+    "run_command": computer.guard_command,
+}
 
-def execute(name: str, tool_input: dict) -> tuple[str, bool]:
-    """Exécute un outil et renvoie `(texte, is_error)`."""
+Confirm = Callable[[str], bool]
+
+
+def execute(name: str, tool_input: dict, confirm: Confirm = lambda question: False) -> tuple[str, bool]:
+    """Exécute un outil et renvoie `(texte, is_error)`.
+
+    Les actions sensibles passent par `confirm`, qui refuse tout par défaut.
+    """
     handler = _HANDLERS.get(name)
     if handler is None:
         return f"Outil inconnu : {name}.", True
     try:
+        guard = _GUARDS.get(name)
+        question = guard(**tool_input) if guard else None
+        if question and not confirm(question):
+            return "L'utilisateur a refusé cette action.", False
         return handler(**tool_input), False
     except ToolError as exc:
         return str(exc), True
-    except (TypeError, AttributeError):
+    except (TypeError, AttributeError, ValueError):
         return f"Arguments invalides pour {name} : {json.dumps(tool_input)}.", True
     except OSError as exc:
-        return f"Erreur d'accès au fichier : {exc}.", True
+        return f"Erreur système : {exc}.", True
