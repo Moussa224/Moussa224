@@ -21,6 +21,10 @@ Jarvis est un assistant personnel en français, propulsé par Claude (`claude-op
 
 ### Installation
 
+**Windows, sans taper de commande** : téléchargez et extrayez le projet (bouton vert **Code** puis **Download ZIP** sur GitHub), puis **double-cliquez sur `Lancer-Jarvis.bat`**. Il vérifie Python (3.10 ou plus), installe ce qu'il faut, vous demande votre clé API (clic droit pour coller) et propose un menu : vérifier, ouvrir dans le navigateur, ou parler dans la fenêtre. Il ne garde la clé sur l'ordinateur que si vous répondez « O ».
+
+**Autres cas, en ligne de commande :**
+
 ```bash
 pip install -e .                       # Python 3.10+ ; installe la commande `jarvis`
 export ANTHROPIC_API_KEY="sk-ant-..."
