@@ -1,9 +1,10 @@
 import anthropic
 import httpx2
 import pytest
+from anthropic.types import ServerToolUseBlock, ThinkingBlock
 from conftest import FakeClient, response, text_block, tool_block
 
-from jarvis import tools
+from jarvis import history, tools
 from jarvis.agent import (
     WEB_TOOLS,
     Jarvis,
@@ -132,7 +133,9 @@ def test_web_tools_are_declared_by_default_and_can_be_disabled():
 
 
 def test_paused_web_turn_is_resumed_with_its_content():
-    server_block = type("B", (), {"type": "server_tool_use", "id": "srvtoolu_1", "name": "web_search"})()
+    server_block = ServerToolUseBlock(
+        type="server_tool_use", id="srvtoolu_1", name="web_search", input={"query": "actualité"}
+    )
     client = FakeClient(
         response("pause_turn", server_block),
         response("end_turn", text_block("Voici le résultat.")),
@@ -209,3 +212,101 @@ def test_sensitive_actions_go_through_the_confirmation_callback(tmp_path):
     make_jarvis(accepted, confirm=lambda q: asked.append(q) or True).ask("écris")
     assert target.read_text() == "x"
     assert len(asked) == 1 and str(target) in asked[0]
+
+
+# --- Reprise de la conversation --------------------------------------------
+
+
+def test_conversation_is_saved_and_can_be_resumed():
+    first = FakeClient(
+        response("tool_use", tool_block("t1", "calculate", {"expression": "6*7"})),
+        response("end_turn", ThinkingBlock(type="thinking", thinking="", signature="sig"), text_block("42.")),
+    )
+    make_jarvis(first).ask("6 fois 7 ?")
+
+    second = FakeClient(response("end_turn", text_block("Toujours 42.")))
+    jarvis = make_jarvis(second)
+    assert jarvis.resume() == 4
+    jarvis.ask("Et si on le redouble ?")
+
+    sent = second.requests[0]["messages"]
+    assert [m["role"] for m in sent] == ["user", "assistant", "user", "assistant", "user"]
+    assert sent[1]["content"] == [{"id": "t1", "input": {"expression": "6*7"}, "name": "calculate", "type": "tool_use"}]
+    # la réflexion et sa signature reviennent telles quelles, comme l'exige l'API
+    assert sent[3]["content"][0] == {"signature": "sig", "thinking": "", "type": "thinking"}
+
+
+def test_resumed_conversation_stays_readable():
+    first = make_jarvis(FakeClient(response("end_turn", text_block("Bonjour."))))
+    first.ask("Salut")
+    live = first.transcript()
+
+    resumed = make_jarvis(FakeClient())
+    resumed.resume()
+
+    assert live == [{"role": "user", "text": "Salut"}, {"role": "assistant", "text": "Bonjour."}]
+    assert resumed.transcript() == live
+
+
+def test_transcript_hides_tool_traffic():
+    jarvis = make_jarvis(
+        FakeClient(
+            response("tool_use", tool_block("t1", "list_notes", {})),
+            response("end_turn", text_block("Aucune note.")),
+        )
+    )
+    jarvis.ask("mes notes ?")
+
+    assert jarvis.transcript() == [
+        {"role": "user", "text": "mes notes ?"},
+        {"role": "assistant", "text": "Aucune note."},
+    ]
+
+
+def test_failed_turns_are_not_saved():
+    jarvis = make_jarvis(FakeClient(response("end_turn", text_block("ok")), response("refusal")))
+    jarvis.ask("un")
+    with pytest.raises(JarvisRefusal):
+        jarvis.ask("deux")
+
+    assert len(history.load()) == 2
+
+
+def test_reset_forgets_the_saved_conversation():
+    jarvis = make_jarvis(FakeClient(response("end_turn", text_block("ok"))))
+    jarvis.ask("un")
+    assert history.load()
+
+    jarvis.reset()
+
+    assert history.load() == []
+    assert make_jarvis(FakeClient()).resume() == 0
+
+
+def test_persistence_can_be_disabled():
+    make_jarvis(FakeClient(response("end_turn", text_block("ok"))), persist=False).ask("un")
+    assert history.load() == []
+
+
+def test_unreadable_saves_are_ignored(isolated_environment):
+    isolated_environment.mkdir()
+    path = isolated_environment / "session.json"
+    for broken in ["{pas du json", '{"a": 1}', '[{"role": "assistant", "content": "x"}]', '[{"role": "user"}]']:
+        path.write_text(broken)
+        assert history.load() == []
+
+
+def test_save_is_private_and_failures_do_not_break_the_turn(isolated_environment, monkeypatch):
+    notices = []
+    jarvis = make_jarvis(FakeClient(response("end_turn", text_block("ok"))), on_notice=notices.append)
+    jarvis.ask("un")
+    assert (isolated_environment / "session.json").stat().st_mode & 0o777 == 0o600
+
+    def disk_full(messages):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(history, "save", disk_full)
+    jarvis.client = FakeClient(response("end_turn", text_block("encore")))
+    jarvis.ask("deux")  # ne lève pas : la réponse a été donnée
+
+    assert notices == ["Conversation non sauvegardée : No space left on device."]

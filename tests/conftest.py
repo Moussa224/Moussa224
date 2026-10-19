@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from anthropic.types import TextBlock, ToolUseBlock
 
 
 @pytest.fixture(autouse=True)
@@ -14,11 +15,11 @@ def isolated_environment(tmp_path, monkeypatch):
 
 
 def text_block(text):
-    return SimpleNamespace(type="text", text=text)
+    return TextBlock(type="text", text=text)
 
 
 def tool_block(id, name, input):
-    return SimpleNamespace(type="tool_use", id=id, name=name, input=input)
+    return ToolUseBlock(type="tool_use", id=id, name=name, input=input)
 
 
 def response(stop_reason, *content):

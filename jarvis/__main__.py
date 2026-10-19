@@ -7,7 +7,8 @@ import sys
 import anthropic
 
 from . import voice
-from .agent import DEFAULT_MODEL, Jarvis, JarvisLoopLimit, JarvisRefusal, JarvisTruncated
+from .agent import DEFAULT_MODEL, Jarvis
+from .display import TURN_ERRORS, describe_error, is_missing_credentials, short
 
 try:  # historique et édition de ligne, si disponibles
     import readline  # noqa: F401
@@ -15,6 +16,7 @@ except ImportError:
     pass
 
 AIDE = "Commandes : /reset (oublier la conversation), /aide, /quitter"
+DEFAULT_PORT = 8765
 YES = ("o", "oui", "y", "yes")
 
 
@@ -23,31 +25,6 @@ def style(text: str, code: str, stream=None) -> str:
     if os.environ.get("NO_COLOR") or not stream.isatty():
         return text
     return f"\033[{code}m{text}\033[0m"
-
-
-def is_missing_credentials(exc: Exception) -> bool:
-    """Le SDK lève un TypeError (et non une AnthropicError) sans identifiants."""
-    return isinstance(exc, TypeError) and "authentication method" in str(exc)
-
-
-def describe_error(exc: Exception) -> str:
-    if is_missing_credentials(exc):
-        return "Aucune clé API. Définissez ANTHROPIC_API_KEY (voir le README)."
-    if isinstance(exc, JarvisRefusal):
-        return "Je ne peux pas répondre à cette demande."
-    if isinstance(exc, JarvisTruncated):
-        return "Ma réponse a été coupée en plein calcul. Pouvez-vous reformuler ?"
-    if isinstance(exc, JarvisLoopLimit):
-        return "Trop d'étapes pour une seule demande. Pouvez-vous la simplifier ?"
-    if isinstance(exc, anthropic.AuthenticationError):
-        return "Clé API refusée. Vérifiez ANTHROPIC_API_KEY."
-    if isinstance(exc, anthropic.RateLimitError):
-        return "Trop de requêtes. Réessayez dans un instant."
-    if isinstance(exc, anthropic.APIStatusError):
-        return f"Erreur de l'API ({exc.status_code}) : {exc.message}"
-    if isinstance(exc, anthropic.APIConnectionError):
-        return "Connexion impossible. Vérifiez votre réseau."
-    return str(exc)
 
 
 def ask_confirmation(question: str) -> bool:
@@ -59,11 +36,6 @@ def ask_confirmation(question: str) -> bool:
         print(file=sys.stderr)
         return False
     return answer.strip().lower() in YES
-
-
-def short(value, limit: int = 80) -> str:
-    text = " ".join(f"{k}={v!r}" for k, v in value.items()) if isinstance(value, dict) else str(value)
-    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 class Session:
@@ -95,7 +67,7 @@ class Session:
         except KeyboardInterrupt:
             print("\n(interrompu)")
             return False
-        except (anthropic.AnthropicError, JarvisRefusal, JarvisTruncated, JarvisLoopLimit) as exc:
+        except TURN_ERRORS as exc:
             return self._fail(exc)
         except TypeError as exc:
             if not is_missing_credentials(exc):
@@ -120,13 +92,37 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--modele", help=f"modèle Claude (défaut : $JARVIS_MODEL ou {DEFAULT_MODEL})")
     parser.add_argument("--sans-web", action="store_true", help="désactive la recherche et la lecture web")
     parser.add_argument("--voix", action="store_true", help="lit les réponses à voix haute")
+    parser.add_argument("--continuer", action="store_true", help="reprend la dernière conversation")
+    parser.add_argument("--web", action="store_true", help="ouvre l'interface web locale")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"port de l'interface web ({DEFAULT_PORT})")
+    parser.add_argument("--sans-navigateur", action="store_true", help="n'ouvre pas le navigateur avec --web")
     args = parser.parse_args(argv)
+
+    if args.web:
+        from . import web  # import tardif : le terminal n'a pas besoin du serveur
+
+        try:
+            web.serve(
+                args.port,
+                {"model": args.modele, "web": not args.sans_web},
+                resume=args.continuer,
+                open_browser=not args.sans_navigateur,
+            )
+        except OSError as exc:
+            reason = exc.strerror or exc
+            print(f"[Impossible de démarrer le serveur sur le port {args.port} : {reason}]", file=sys.stderr)
+            return 1
+        return 0
 
     try:
         session = Session(args.modele, web=not args.sans_web, speak=args.voix)
     except anthropic.AnthropicError as exc:
         print(f"[{describe_error(exc)}]", file=sys.stderr)
         return 1
+
+    if args.continuer:
+        count = session.jarvis.resume()
+        print(style(f"Conversation reprise ({count} messages)." if count else "Aucune conversation à reprendre.", "2"))
 
     if args.question:
         return 0 if session.ask(" ".join(args.question)) else 1

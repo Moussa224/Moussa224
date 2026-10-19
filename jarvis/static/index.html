@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Jarvis</title>
+<style>
+  :root {
+    --bg: #f3f7fb;
+    --bg-glow: rgba(0, 160, 200, 0.10);
+    --panel: #ffffff;
+    --panel-line: rgba(8, 40, 70, 0.14);
+    --text: #0f2233;
+    --muted: #55697b;
+    --accent: #007ea3;
+    --accent-ink: #ffffff;
+    --user-bg: #dff2f8;
+    --warn: #9a5b00;
+    --danger: #b3261e;
+    --orb-core: #00a9d4;
+    --orb-ring: rgba(0, 126, 163, 0.55);
+    --shadow: 0 10px 30px rgba(8, 40, 70, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #050a12;
+      --bg-glow: rgba(30, 200, 255, 0.10);
+      --panel: #0c1522;
+      --panel-line: rgba(90, 200, 255, 0.18);
+      --text: #d9e8f5;
+      --muted: #8196aa;
+      --accent: #37dcff;
+      --accent-ink: #03141c;
+      --user-bg: #0f2a3a;
+      --warn: #ffc15a;
+      --danger: #ff7b72;
+      --orb-core: #37dcff;
+      --orb-ring: rgba(55, 220, 255, 0.6);
+      --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(900px 500px at 50% -10%, var(--bg-glow), transparent 70%),
+      var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- Orbe ---- */
+  .orb { position: relative; width: var(--size, 44px); height: var(--size, 44px); flex: none; }
+  .orb::before, .orb::after, .orb i { content: ""; position: absolute; border-radius: 50%; }
+  .orb::before {            /* anneau tournant */
+    inset: 0;
+    background: conic-gradient(from 0deg, transparent 0 55%, var(--orb-ring) 75%, transparent 100%);
+    -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%);
+            mask: radial-gradient(circle, transparent 58%, #000 60%);
+    animation: spin 6s linear infinite;
+  }
+  .orb::after {             /* anneau fixe */
+    inset: 8%;
+    border: 1px solid var(--orb-ring);
+    opacity: .55;
+  }
+  .orb i {                  /* noyau */
+    inset: 30%;
+    background: radial-gradient(circle at 40% 35%, #fff 0%, var(--orb-core) 45%, transparent 75%);
+    box-shadow: 0 0 calc(var(--size, 44px) * .45) var(--orb-core);
+    animation: breathe 4s ease-in-out infinite;
+  }
+  .orb[data-state="thinking"]::before { animation-duration: 1.2s; }
+  .orb[data-state="thinking"] i { animation: pulse .9s ease-in-out infinite; }
+  .orb[data-state="speaking"] i { animation: pulse .5s ease-in-out infinite; }
+  .orb[data-state="listening"] { --orb-core: #ffb340; --orb-ring: rgba(255, 179, 64, .7); }
+  .orb[data-state="listening"] i { animation: pulse .7s ease-in-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes breathe { 50% { transform: scale(1.12); opacity: .85; } }
+  @keyframes pulse { 50% { transform: scale(1.35); opacity: .75; } }
+
+  /* ---- En-tête ---- */
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+    border-bottom: 1px solid var(--panel-line);
+  }
+  .brand { flex: 1; min-width: 0; }
+  .brand h1 { margin: 0; font-size: 1rem; letter-spacing: .32em; font-weight: 600; }
+  #status { margin: 0; font-size: .8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+    background: transparent; border: 1px solid var(--panel-line); color: var(--muted);
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+  .icon-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+  .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---- Conversation ---- */
+  main { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+  #log { max-width: 760px; margin: 0 auto; padding: 20px 16px 8px; display: flex; flex-direction: column; gap: 12px; }
+  .msg {
+    max-width: 88%; padding: 10px 14px; border-radius: 16px;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    border: 1px solid var(--panel-line);
+  }
+  .msg.user { align-self: flex-end; background: var(--user-bg); border-bottom-right-radius: 4px; }
+  .msg.jarvis { align-self: flex-start; background: var(--panel); border-bottom-left-radius: 4px; box-shadow: var(--shadow); }
+  .msg.jarvis.waiting::after {
+    content: ""; display: inline-block; width: 1.6em; height: .35em; vertical-align: middle;
+    background: radial-gradient(circle, var(--accent) 45%, transparent 50%) 0 50% / .55em 100% repeat-x;
+    animation: dots 1s steps(4) infinite;
+  }
+  @keyframes dots { to { background-position: 2.2em 50%; } }
+  .note {
+    align-self: flex-start; font: .8rem/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--muted); padding: 2px 10px; border-left: 2px solid var(--accent);
+    max-width: 100%; overflow-wrap: anywhere;
+  }
+  .note.warn { color: var(--warn); border-color: var(--warn); }
+  .note.error { color: var(--danger); border-color: var(--danger); }
+
+  /* ---- Accueil ---- */
+  #welcome { display: grid; justify-items: center; gap: 14px; text-align: center; padding: 8vh 8px 0; }
+  #welcome h2 { margin: 0; font-weight: 500; font-size: 1.25rem; }
+  #welcome p { margin: 0; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 999px;
+    padding: 8px 14px; font-size: .9rem; color: var(--text);
+  }
+  .chip:hover { border-color: var(--accent); }
+
+  /* ---- Saisie ---- */
+  footer { padding: 8px 16px max(14px, env(safe-area-inset-bottom)); }
+  form {
+    max-width: 760px; margin: 0 auto; display: flex; align-items: flex-end; gap: 8px;
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 18px; padding: 8px;
+    box-shadow: var(--shadow);
+  }
+  form:focus-within { border-color: var(--accent); }
+  textarea {
+    flex: 1; resize: none; border: 0; background: transparent; color: var(--text);
+    font: inherit; padding: 8px 6px; max-height: 40vh; outline: none;
+  }
+  textarea:focus-visible { outline: none; }  /* le cadre du formulaire (:focus-within) suffit */
+  textarea::placeholder { color: var(--muted); }
+  .send {
+    width: 40px; height: 40px; border-radius: 12px; border: 0; display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-ink);
+  }
+  .send:disabled { opacity: .4; cursor: default; }
+  #mic[hidden] { display: none; }
+
+  /* ---- Fenêtre d'accord ---- */
+  dialog {
+    width: min(92vw, 460px); border: 1px solid var(--accent); border-radius: 16px; padding: 20px;
+    background: var(--panel); color: var(--text); box-shadow: 0 0 0 1px var(--panel-line), var(--shadow);
+  }
+  dialog::backdrop { background: rgba(0, 6, 12, .65); backdrop-filter: blur(3px); }
+  dialog h2 { margin: 0 0 4px; font-size: .8rem; letter-spacing: .2em; text-transform: uppercase; color: var(--warn); }
+  dialog p { margin: 8px 0 18px; font: .95rem/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn { border-radius: 10px; padding: 9px 18px; border: 1px solid var(--panel-line); background: transparent; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="orb" id="orb" data-state="idle" style="--size:44px" aria-hidden="true"><i></i></div>
+  <div class="brand">
+    <h1>JARVIS</h1>
+    <p id="status" role="status">Connexion…</p>
+  </div>
+  <button class="icon-btn" id="voice" type="button" aria-pressed="false" aria-label="Lire les réponses à voix haute" title="Lire les réponses à voix haute">
+    <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+  </button>
+  <button class="icon-btn" id="reset" type="button" aria-label="Nouvelle conversation" title="Nouvelle conversation">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+</header>
+
+<main id="scroller">
+  <div id="log" role="log" aria-live="polite" aria-label="Conversation">
+    <section id="welcome">
+      <div class="orb" data-state="idle" style="--size:110px" aria-hidden="true"><i></i></div>
+      <h2>Bonjour Moussa. Que puis-je faire pour vous ?</h2>
+      <p>Posez une question, demandez une recherche, ou confiez-moi une tâche.</p>
+      <div class="chips" id="chips"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <form id="composer">
+    <textarea id="input" rows="1" placeholder="Écrivez à Jarvis…" aria-label="Votre message" autocomplete="off" enterkeyhint="send"></textarea>
+    <button class="icon-btn" id="mic" type="button" aria-label="Parler à Jarvis" title="Parler à Jarvis" hidden>
+      <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+    <button class="send" id="send" type="submit" aria-label="Envoyer" title="Envoyer">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </form>
+</footer>
+
+<dialog id="approval" aria-labelledby="approval-title">
+  <h2 id="approval-title">Autorisation requise</h2>
+  <p id="approval-question"></p>
+  <div class="actions">
+    <button class="btn" id="deny" type="button">Refuser</button>
+    <button class="btn primary" id="allow" type="button">Autoriser</button>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+const $ = (selector) => document.querySelector(selector);
+const els = {
+  orb: $("#orb"), status: $("#status"), log: $("#log"), scroller: $("#scroller"), welcome: $("#welcome"),
+  input: $("#input"), send: $("#send"), mic: $("#mic"), voice: $("#voice"), reset: $("#reset"),
+  form: $("#composer"), dialog: $("#approval"), question: $("#approval-question"),
+};
+
+/* ---- Stockage : jamais indispensable ---- */
+const store = {
+  get(area, key) { try { return window[area].getItem(key); } catch { return null; } },
+  set(area, key, value) { try { window[area].setItem(key, value); } catch { /* navigation privée */ } },
+};
+
+/* ---- Jeton : transmis dans le fragment de l'URL, puis retiré de la barre d'adresse ---- */
+const fromHash = /token=([\w-]+)/.exec(location.hash);
+if (fromHash) {
+  store.set("sessionStorage", "jarvis-token", fromHash[1]);
+  history.replaceState(null, "", location.pathname);
+}
+const token = fromHash ? fromHash[1] : store.get("sessionStorage", "jarvis-token");
+
+const app = { busy: false, current: null, spoken: [], speak: store.get("localStorage", "jarvis-voice") === "1" };
+
+/* ---- Interface ---- */
+function setState(state, label) {
+  document.querySelectorAll(".orb").forEach((orb) => { orb.dataset.state = state; });
+  els.status.textContent = label;
+}
+const idleLabel = () => (app.busy ? "Réflexion…" : "En ligne");
+
+function add(kind, text) {
+  els.welcome?.remove();
+  els.welcome = null;
+  const node = document.createElement("div");
+  node.className = kind;
+  node.textContent = text;
+  els.log.append(node);
+  scrollDown();
+  return node;
+}
+
+function scrollDown() {
+  const s = els.scroller;
+  if (s.scrollHeight - s.scrollTop - s.clientHeight < 160 || app.busy) s.scrollTop = s.scrollHeight;
+}
+
+function setBusy(busy) {
+  app.busy = busy;
+  els.send.disabled = busy;
+  setState(busy ? "thinking" : "idle", busy ? "Réflexion…" : "En ligne");
+}
+
+/* ---- Appels au serveur ---- */
+function call(path, body) {
+  return fetch(path, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { "Content-Type": "application/json", "X-Jarvis-Token": token || "" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+async function loadState() {
+  try {
+    const res = await call("/api/state");
+    if (res.status === 403) throw new Error("denied");
+    const state = await res.json();
+    state.transcript.forEach((turn) => add(`msg ${turn.role === "user" ? "user" : "jarvis"}`, turn.text));
+    setState("idle", "En ligne · " + state.model + (state.web ? "" : " · sans web"));
+  } catch (error) {
+    setState("idle", "Hors ligne");
+    add("note error", error.message === "denied"
+      ? "Lien invalide ou expiré. Rouvrez le lien affiché par Jarvis dans le terminal."
+      : "Impossible de joindre Jarvis. Est-il toujours lancé dans le terminal ?");
+    els.send.disabled = true;
+  }
+}
+
+async function ask(message) {
+  message = message.trim();
+  if (!message || app.busy) return;
+  stopSpeaking();
+  add("msg user", message);
+  app.current = null;
+  app.spoken = [];
+  setBusy(true);
+  const waiting = add("msg jarvis waiting", "");
+  try {
+    const res = await call("/api/chat", { message });
+    if (!res.ok) throw new Error((await res.json()).error || "Erreur " + res.status);
+    await readEvents(res.body, (event) => handle(event, waiting));
+  } catch (error) {
+    add("note error", error.message || "Connexion perdue.");
+  } finally {
+    waiting.remove();
+    setBusy(false);
+    if (app.spoken.length) speak(app.spoken.join(" "));
+  }
+}
+
+async function readEvents(body, onEvent) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let end;
+    while ((end = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, end).trim();
+      buffer = buffer.slice(end + 1);
+      if (line) onEvent(JSON.parse(line));
+    }
+  }
+}
+
+function handle(event, waiting) {
+  switch (event.type) {
+    case "text":
+      if (!app.current) {
+        app.current = add("msg jarvis", "");
+        app.spoken.push("");
+      }
+      app.current.textContent += event.text;
+      app.spoken[app.spoken.length - 1] += event.text;
+      waiting.remove();
+      scrollDown();
+      break;
+    case "tool":
+      app.current = null;
+      add("note", "⚙ " + event.name + " " + event.summary);
+      els.log.append(waiting);
+      break;
+    case "notice": add("note warn", event.message); break;
+    case "error": add("note error", event.message); break;
+    case "confirm": approve(event); break;
+    case "confirm_done": if (els.dialog.open && els.dialog.dataset.id === event.id) els.dialog.close(); break;
+  }
+}
+
+/* ---- Autorisation des actions sensibles ---- */
+function approve(event) {
+  els.question.textContent = event.question;
+  els.dialog.dataset.id = event.id;
+  els.dialog.showModal();
+  $("#deny").focus(); // refuser est le choix par défaut
+}
+function decide(allow) {
+  const id = els.dialog.dataset.id;
+  els.dialog.close();
+  call("/api/confirm", { id, allow }).catch(() => {});
+}
+$("#allow").addEventListener("click", () => decide(true));
+$("#deny").addEventListener("click", () => decide(false));
+els.dialog.addEventListener("cancel", (event) => { event.preventDefault(); decide(false); }); // Échap
+
+/* ---- Voix : sortie ---- */
+function cleanForSpeech(text) {
+  return text.replace(/```[\s\S]*?```/g, " ").replace(/https?:\/\/\S+/g, " ")
+    .replace(/[`*_#>]|^\s*[-•]\s+/gm, " ").replace(/\s+/g, " ").trim();
+}
+function speak(text) {
+  if (!app.speak || !("speechSynthesis" in window)) return;
+  const utterance = new SpeechSynthesisUtterance(cleanForSpeech(text));
+  utterance.lang = "fr-FR";
+  utterance.voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith("fr")) || null;
+  utterance.onstart = () => setState("speaking", "Parle…");
+  utterance.onend = utterance.onerror = () => setState("idle", idleLabel());
+  speechSynthesis.speak(utterance);
+}
+function stopSpeaking() { if ("speechSynthesis" in window) speechSynthesis.cancel(); }
+
+function paintVoiceButton() {
+  els.voice.setAttribute("aria-pressed", String(app.speak));
+  els.voice.title = app.speak ? "Réponses vocales activées" : "Lire les réponses à voix haute";
+}
+if (!("speechSynthesis" in window)) els.voice.hidden = true;
+els.voice.addEventListener("click", () => {
+  app.speak = !app.speak;
+  store.set("localStorage", "jarvis-voice", app.speak ? "1" : "0");
+  if (!app.speak) stopSpeaking();
+  paintVoiceButton();
+});
+paintVoiceButton();
+
+/* ---- Voix : entrée (reconnaissance du navigateur, si disponible) ---- */
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognizer = null;
+if (Recognition) {
+  els.mic.hidden = false;
+  els.mic.addEventListener("click", () => {
+    if (recognizer) return recognizer.stop();
+    if (app.busy) return;
+    stopSpeaking();
+    const recognition = new Recognition();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = true;
+    let heard = "";
+    recognition.onresult = (event) => {
+      heard = Array.from(event.results).map((r) => r[0].transcript).join(" ");
+      els.input.value = heard;
+      grow();
+    };
+    recognition.onerror = (event) => {
+      if (event.error === "not-allowed") add("note warn", "Accès au micro refusé par le navigateur.");
+      else if (event.error !== "no-speech" && event.error !== "aborted") add("note warn", "Reconnaissance vocale : " + event.error);
+    };
+    recognition.onend = () => {
+      recognizer = null;
+      els.mic.setAttribute("aria-pressed", "false");
+      setState("idle", idleLabel());
+      if (heard.trim()) { els.input.value = ""; grow(); ask(heard); }
+    };
+    recognizer = recognition;
+    els.mic.setAttribute("aria-pressed", "true");
+    setState("listening", "Je vous écoute…");
+    recognition.start();
+  });
+}
+
+/* ---- Saisie ---- */
+function grow() {
+  els.input.style.height = "auto";
+  els.input.style.height = els.input.scrollHeight + "px";
+}
+els.input.addEventListener("input", grow);
+els.input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    els.form.requestSubmit();
+  }
+});
+els.form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const message = els.input.value;
+  els.input.value = "";
+  grow();
+  ask(message);
+});
+
+els.reset.addEventListener("click", async () => {
+  if (app.busy) return;
+  if (els.log.querySelector(".msg") && !confirm("Oublier toute la conversation ?")) return;
+  stopSpeaking();
+  const res = await call("/api/reset", {}).catch(() => null);
+  if (res && res.ok) location.reload();
+});
+
+["Quelle heure est-il à Tokyo ?", "Quelles sont les dernières nouvelles ?", "Que contient ce dossier ?", "Retiens que je préfère être tutoyé"]
+  .forEach((suggestion) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = suggestion;
+    chip.addEventListener("click", () => ask(suggestion));
+    $("#chips").append(chip);
+  });
+
+loadState();
+els.input.focus();
+</script>
+</body>
+</html>

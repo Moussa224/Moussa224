@@ -130,3 +130,47 @@ def test_colors_only_on_a_terminal(monkeypatch):
 def test_tool_arguments_are_shortened_for_display():
     assert cli.short({"command": "ls"}) == "command='ls'"
     assert len(cli.short({"content": "x" * 500})) == 80
+
+
+def test_continue_resumes_the_saved_conversation(fake_api, capsys):
+    fake_api(response("end_turn", text_block("Bonjour.")))
+    cli.main(["Salut"])
+    client = fake_api(response("end_turn", text_block("Encore là.")))
+
+    assert cli.main(["--continuer", "Toujours là ?"]) == 0
+
+    assert "Conversation reprise (2 messages)." in capsys.readouterr().out
+    assert [m["role"] for m in client.requests[0]["messages"]] == ["user", "assistant", "user"]
+
+
+def test_continue_without_a_saved_conversation(fake_api, capsys):
+    fake_api(response("end_turn", text_block("Bonjour.")))
+
+    cli.main(["--continuer", "Salut"])
+
+    assert "Aucune conversation à reprendre." in capsys.readouterr().out
+
+
+def test_web_option_starts_the_local_server(monkeypatch):
+    from jarvis import web
+
+    started = {}
+    monkeypatch.setattr(web, "serve", lambda *args, **kwargs: started.update(args=args, kwargs=kwargs))
+
+    assert cli.main(["--web", "--port", "9000", "--sans-web", "--continuer", "--sans-navigateur"]) == 0
+
+    assert started["args"] == (9000, {"model": None, "web": False})
+    assert started["kwargs"] == {"resume": True, "open_browser": False}
+
+
+def test_web_option_explains_a_busy_port(monkeypatch, capsys):
+    from jarvis import web
+
+    def busy(*args, **kwargs):
+        raise OSError(98, "Address already in use")
+
+    monkeypatch.setattr(web, "serve", busy)
+
+    assert cli.main(["--web"]) == 1
+
+    assert "port 8765" in capsys.readouterr().err

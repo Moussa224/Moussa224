@@ -5,7 +5,8 @@ from typing import Callable
 
 import anthropic
 
-from . import tools
+from . import history, tools
+from .errors import JarvisLoopLimit, JarvisRefusal, JarvisTruncated
 
 DEFAULT_MODEL = "claude-opus-5-5"
 MAX_TOKENS = 16000
@@ -50,16 +51,11 @@ def build_system_prompt() -> str:
     return f"{SYSTEM_PROMPT}\n\nCe que tu sais de Moussa :\n{facts}"
 
 
-class JarvisRefusal(Exception):
-    """Claude a refusé de répondre (`stop_reason: refusal`)."""
-
-
-class JarvisTruncated(Exception):
-    """La réponse a été coupée en plein appel d'outil."""
-
-
-class JarvisLoopLimit(Exception):
-    """Trop d'allers-retours d'outils pour un seul message."""
+def _text_of(block) -> str:
+    """Texte d'un bloc de réponse, qu'il vienne du SDK ou d'une sauvegarde."""
+    if isinstance(block, dict):
+        return block.get("text", "") if block.get("type") == "text" else ""
+    return block.text if block.type == "text" else ""
 
 
 class Jarvis:
@@ -72,6 +68,7 @@ class Jarvis:
         on_tool: Callable[[str, dict], None] = lambda name, tool_input: None,
         on_notice: Callable[[str], None] = lambda message: None,
         confirm: tools.Confirm = lambda question: False,
+        persist: bool = True,
     ):
         self.client = client or anthropic.Anthropic()
         self.model = model or os.environ.get("JARVIS_MODEL") or DEFAULT_MODEL
@@ -80,11 +77,32 @@ class Jarvis:
         self.on_tool = on_tool
         self.on_notice = on_notice
         self.confirm = confirm
+        self.persist = persist
         self.system = build_system_prompt()
         self.messages: list[dict] = []
 
     def reset(self) -> None:
         self.messages.clear()
+        if self.persist:
+            history.clear()
+
+    def resume(self) -> int:
+        """Reprend la dernière conversation sauvegardée ; renvoie le nombre de messages."""
+        self.messages[:] = history.load()
+        return len(self.messages)
+
+    def transcript(self) -> list[dict]:
+        """Les échanges lisibles (texte seul), sans les appels d'outils."""
+        turns = []
+        for message in self.messages:
+            content = message["content"]
+            if message["role"] == "user":
+                text = content if isinstance(content, str) else ""
+            else:
+                text = "".join(_text_of(block) for block in content)
+            if text:
+                turns.append({"role": message["role"], "text": text})
+        return turns
 
     def ask(self, user_message: str) -> None:
         """Traite un message ; la réponse est diffusée via `on_text`.
@@ -99,6 +117,15 @@ class Jarvis:
         except BaseException:
             del self.messages[checkpoint:]
             raise
+        self._save()
+
+    def _save(self) -> None:
+        if not self.persist:
+            return
+        try:
+            history.save(self.messages)
+        except OSError as exc:
+            self.on_notice(f"Conversation non sauvegardée : {exc.strerror or exc}.")
 
     def _run_turn(self) -> None:
         for _ in range(MAX_ROUNDS):

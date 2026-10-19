@@ -3,7 +3,7 @@ Moussa kourouma
 
 ## Jarvis
 
-Jarvis est un assistant personnel en ligne de commande, en français, propulsé par Claude (`claude-opus-5-5`). Il répond en direct, cherche sur le web, retient ce que vous lui dites et peut agir sur votre ordinateur, **toujours avec votre accord** pour ce qui est sensible.
+Jarvis est un assistant personnel en français, propulsé par Claude (`claude-opus-5-5`), dans votre terminal **ou dans une interface web locale**. Il répond en direct, cherche sur le web, retient ce que vous lui dites et peut agir sur votre ordinateur, **toujours avec votre accord** pour ce qui est sensible.
 
 ### Ce qu'il sait faire
 
@@ -16,7 +16,8 @@ Jarvis est un assistant personnel en ligne de commande, en français, propulsé 
 | **Mémoire** | `remember`, `forget` : ce qu'il doit savoir de vous (préférences, contexte). Rechargée à chaque démarrage |
 | **Fichiers** | `list_directory`, `read_file`, `write_file` |
 | **Commandes** | `run_command` : exécute une commande shell et lit sa sortie |
-| **Voix** | `--voix` lit les réponses à voix haute (`say` sur macOS, `espeak-ng`/`espeak`/`spd-say` sur Linux) |
+| **Voix** | terminal : `--voix` lit les réponses (`say` sur macOS, `espeak-ng`/`espeak`/`spd-say` sur Linux). Web : micro et lecture vocale intégrés (voir plus bas) |
+| **Reprise** | `--continuer` reprend la dernière conversation, même après avoir fermé Jarvis |
 
 ### Installation
 
@@ -33,6 +34,8 @@ La recherche web doit être activée pour votre organisation dans la Console Ant
 python -m jarvis                                   # conversation interactive
 python -m jarvis "Quelle heure est-il à Tokyo ?"   # une seule question
 python -m jarvis --voix                            # avec réponse vocale
+python -m jarvis --continuer                       # reprend la dernière conversation
+python -m jarvis --web                             # interface web (s'ouvre dans le navigateur)
 python -m jarvis --modele claude-sonnet-5-5        # modèle plus économique
 python -m jarvis --sans-web                        # sans accès au web
 ```
@@ -48,13 +51,27 @@ Exemples :
 - « Résume le fichier README.md de ce dossier. »
 - « Combien d'espace libre me reste-t-il sur le disque ? » (Jarvis propose une commande, vous validez)
 
+### Interface web
+
+```bash
+python -m jarvis --web                       # affiche un lien privé et ouvre le navigateur
+python -m jarvis --web --port 9000           # autre port (8765 par défaut)
+python -m jarvis --web --sans-navigateur     # n'ouvre rien, copiez le lien vous-même
+python -m jarvis --web --continuer           # reprend la dernière conversation
+```
+
+La page affiche la réponse au fil de l'eau, montre les outils utilisés, et ouvre une fenêtre **Autorisation requise** (« Refuser » est le choix par défaut, Échap refuse) quand Jarvis veut écrire un fichier ou lancer une commande. Sans réponse au bout de 2 minutes, l'action est refusée. La page s'adapte aux petits écrans, mais le serveur n'est volontairement pas accessible depuis le réseau (donc pas depuis un téléphone).
+
+**Voix dans le navigateur** : le bouton haut-parleur lit les réponses à voix haute ; le bouton micro permet de dicter un message, envoyé dès que vous vous taisez. La reconnaissance vocale dépend du navigateur (Chrome, Edge, Safari) et le bouton n'apparaît que s'il la propose. Avec Chrome, l'audio est traité par les serveurs de Google : n'utilisez pas le micro si cela ne vous convient pas, le reste fonctionne sans.
+
 ### Sécurité
 
 - **Écrire un fichier** et **lancer une commande** demandent toujours votre accord : `Autoriser ? [o/N]`. Toute réponse autre que « o » ou « oui » refuse, et sans terminal (entrée fermée) tout est refusé.
 - **Lire** un fichier ou lister un dossier est libre dans le dossier courant ; en dehors, Jarvis demande d'abord.
 - Les commandes n'ont pas accès à votre clavier (elles ne peuvent pas attendre une saisie) et sont interrompues après 60 s par défaut (300 s au maximum).
 - Le contenu des pages web, des fichiers et des sorties de commandes est traité comme de la donnée : Jarvis a pour consigne d'ignorer toute « instruction » qui s'y cacherait. Ce n'est pas une garantie absolue, c'est pourquoi l'accord humain reste la vraie barrière.
-- Vos notes et souvenirs sont de simples fichiers JSON dans `~/.jarvis/` (`JARVIS_HOME` pour changer de dossier) : lisibles et modifiables à la main.
+- Vos notes et souvenirs sont de simples fichiers JSON dans `~/.jarvis/` (`JARVIS_HOME` pour changer de dossier) : lisibles et modifiables à la main. La conversation sauvegardée (`session.json`) n'est lisible que par vous, car elle peut contenir des fichiers que Jarvis a lus. `/reset` l'efface.
+- **Serveur web** : il n'écoute que sur `127.0.0.1`. Comme il peut déclencher des actions, chaque requête exige un jeton secret aléatoire (dans le fragment du lien, donc ni envoyé au serveur ni journalisé, et retiré de la barre d'adresse), un en-tête `Host` attendu (contre le *DNS rebinding*) et une origine identique au serveur (un autre site ouvert dans votre navigateur ne peut pas lui parler). La page applique une politique CSP stricte et n'insère jamais de texte comme HTML. Ne partagez pas le lien.
 
 ### Configuration
 
@@ -63,7 +80,7 @@ Exemples :
 | `ANTHROPIC_API_KEY` | clé API (obligatoire) |
 | `JARVIS_MODEL` | modèle par défaut (sinon `claude-opus-5-5`) ; `--modele` est prioritaire |
 | `JARVIS_HOME` | dossier des notes et souvenirs (sinon `~/.jarvis`) |
-| `NO_COLOR` | désactive les couleurs |
+| `NO_COLOR` | désactive les couleurs dans le terminal |
 
 ### Ajouter un outil
 
@@ -75,4 +92,4 @@ Dans `jarvis/tools.py` : écrire la fonction (elle renvoie du texte ou lève `To
 python -m pytest
 ```
 
-Les tests n'appellent pas l'API : l'agent est testé avec un faux client, et les garde-fous de sécurité sont vérifiés (les supprimer fait échouer les tests).
+Les tests n'appellent pas l'API : l'agent est testé avec un faux client, le serveur web avec de vraies requêtes HTTP, et les garde-fous de sécurité sont vérifiés (les supprimer fait échouer les tests).
