@@ -10,7 +10,9 @@ Les actions sensibles restent soumises à l'accord de l'utilisateur, demandé da
 """
 
 import hmac
+import html
 import json
+import os
 import secrets
 import threading
 import webbrowser
@@ -19,6 +21,7 @@ from pathlib import Path
 
 from .agent import Jarvis
 from .display import TURN_ERRORS, describe_error, is_missing_credentials, short
+from .tools import jarvis_home
 
 INDEX = Path(__file__).parent / "static" / "index.html"
 TOKEN_HEADER = "X-Jarvis-Token"
@@ -170,11 +173,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(page)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
             self.send_header("Referrer-Policy", "no-referrer")
             self.send_header(
                 "Content-Security-Policy",
                 "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
-                "connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'",
+                "connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
             )
             self.end_headers()
             self.wfile.write(page)
@@ -245,17 +249,43 @@ class JarvisServer(ThreadingHTTPServer):
         self.allowed_hosts = {f"127.0.0.1:{self.server_port}", f"localhost:{self.server_port}"}
 
 
+def _write_launcher(url: str) -> Path:
+    """Page de redirection que vous seul pouvez lire, à ouvrir dans le navigateur à la place de l'URL.
+
+    Une URL passée en argument au navigateur est visible de tous les utilisateurs de la machine
+    (`ps`, `/proc/<pid>/cmdline`) pendant toute sa durée de vie ; or le jeton donne la main sur Jarvis,
+    approbations comprises. Même précaution que Jupyter."""
+    path = jarvis_home() / "jarvis-open.html"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    target = html.escape(url, quote=True)
+    with os.fdopen(os.open(path, flags, 0o600), "w", encoding="utf-8") as handle:
+        handle.write(
+            f'<!doctype html><meta charset="utf-8"><title>Jarvis</title>'
+            f'<meta http-equiv="refresh" content="0;url={target}"><a href="{target}">Ouvrir Jarvis</a>'
+        )
+    os.chmod(path, 0o600)  # si le fichier existait déjà avec d'autres droits
+    return path
+
+
 def serve(port: int, jarvis_options: dict, resume: bool, open_browser: bool = True) -> None:
     token = secrets.token_urlsafe(24)
     server = JarvisServer(WebApp(token, jarvis_options, resume), port)
     url = f"http://127.0.0.1:{server.server_port}/#token={token}"
     print(f"Jarvis web : {url}")
     print("Gardez ce lien privé : il donne accès à Jarvis. Ctrl-C pour arrêter.")
+    launcher = None
     if open_browser:
-        webbrowser.open(url)
+        try:
+            launcher = _write_launcher(url)
+            webbrowser.open(launcher.as_uri())
+        except OSError as exc:
+            print(f"Navigateur non ouvert ({exc.strerror or exc}) : utilisez le lien ci-dessus.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print()
     finally:
         server.server_close()
+        if launcher:
+            launcher.unlink(missing_ok=True)

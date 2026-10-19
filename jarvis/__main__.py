@@ -8,7 +8,7 @@ import anthropic
 
 from . import diagnostic, voice
 from .agent import DEFAULT_MODEL, Jarvis
-from .display import TURN_ERRORS, describe_error, is_missing_credentials, short
+from .display import TURN_ERRORS, describe_error, is_missing_credentials, plain, short
 
 try:  # historique et édition de ligne, si disponibles
     import readline  # noqa: F401
@@ -57,7 +57,7 @@ class Session:
 
     def _on_text(self, text: str) -> None:
         self.reply.append(text)
-        print(text, end="", flush=True)
+        print(plain(text), end="", flush=True)
 
     def ask(self, message: str) -> bool:
         """Pose une question ; renvoie False si le tour a échoué."""

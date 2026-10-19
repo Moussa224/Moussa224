@@ -299,3 +299,51 @@ def test_the_page_never_builds_html_from_untrusted_text():
 
     for dangerous in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function"):
         assert dangerous not in page
+
+
+# --- Le jeton ne doit pas fuiter hors de la page -----------------------------
+
+
+def test_browser_is_opened_on_a_private_launcher_never_on_the_token_url(monkeypatch, isolated_environment):
+    """Une URL passée au navigateur est lisible par tous les utilisateurs de la machine (ps, /proc)."""
+    import stat
+
+    import jarvis.web as web
+
+    opened, seen = [], {}
+    monkeypatch.setattr(web.webbrowser, "open", opened.append)
+
+    def serve_forever(self, *args, **kwargs):
+        launcher = isolated_environment / "jarvis-open.html"
+        seen["mode"] = stat.S_IMODE(launcher.stat().st_mode)
+        seen["page"] = launcher.read_text()
+
+    monkeypatch.setattr(web.JarvisServer, "serve_forever", serve_forever)
+
+    web.serve(0, {}, resume=False, open_browser=True)
+
+    [argument] = opened
+    assert argument.startswith("file://") and "token" not in argument
+    assert seen["mode"] == 0o600
+    assert 'http-equiv="refresh"' in seen["page"] and "#token=" in seen["page"]
+    assert not (isolated_environment / "jarvis-open.html").exists()  # supprimé à l'arrêt
+
+
+def test_launcher_is_not_created_when_the_browser_is_not_wanted(monkeypatch, isolated_environment):
+    import jarvis.web as web
+
+    monkeypatch.setattr(web.JarvisServer, "serve_forever", lambda self, *a, **k: None)
+    monkeypatch.setattr(web.webbrowser, "open", lambda url: pytest.fail("le navigateur ne devait pas s'ouvrir"))
+
+    web.serve(0, {}, resume=False, open_browser=False)
+
+    assert not (isolated_environment / "jarvis-open.html").exists()
+
+
+def test_the_page_cannot_be_framed(start):
+    browser, _, _ = start()
+
+    reply = browser.request("GET", "/", token=None)
+
+    assert reply.getheader("X-Frame-Options") == "DENY"
+    assert "frame-ancestors 'none'" in reply.getheader("Content-Security-Policy")

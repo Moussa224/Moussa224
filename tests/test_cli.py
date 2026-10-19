@@ -174,3 +174,15 @@ def test_web_option_explains_a_busy_port(monkeypatch, capsys):
     assert cli.main(["--web"]) == 1
 
     assert "port 8765" in capsys.readouterr().err
+
+
+def test_model_output_cannot_drive_the_terminal(fake_api, capsys):
+    """Un texte venu du web (via le modèle) ne doit pas injecter de séquences d'échappement."""
+    hostile = "salut\x1b]52;c;ZXZpbA==\x07\x1b[2J\r efface\ttout\nfin"
+    fake_api(response("end_turn", text_block(hostile)))
+
+    cli.main(["bonjour"])
+
+    out = capsys.readouterr().out
+    assert "\x1b" not in out and "\x07" not in out and "\r" not in out
+    assert "salut" in out and "\tout" not in out and "efface\ttout\nfin" in out  # texte et mise en forme gardés

@@ -1,5 +1,7 @@
 """Mise en forme partagée par le terminal et l'interface web."""
 
+import unicodedata
+
 import anthropic
 
 from .errors import JarvisLoopLimit, JarvisRefusal, JarvisTruncated
@@ -31,6 +33,19 @@ def describe_error(exc: Exception) -> str:
     if isinstance(exc, anthropic.APIConnectionError):
         return "Connexion impossible. Vérifiez votre réseau."
     return str(exc)
+
+
+def visible(text: str) -> str:
+    """Rend visible ce qu'un terminal ou un navigateur interpréterait : `\\r`, séquences ANSI, inversion du
+    sens d'écriture, caractères invisibles. Sert à tout ce que l'utilisateur doit approuver : un texte
+    piégé ne peut ainsi pas se déguiser en autre chose."""
+    return "".join(ch if ch.isprintable() else ch.encode("unicode_escape").decode() for ch in text)
+
+
+def plain(text: str) -> str:
+    """Retire d'un texte affiché brut dans un terminal les caractères de contrôle (sauf retour à la ligne
+    et tabulation) : un texte venu du web ne peut pas y piloter le terminal."""
+    return "".join(ch for ch in text if ch in "\n\t" or unicodedata.category(ch) != "Cc")
 
 
 def short(value, limit: int = 80) -> str:

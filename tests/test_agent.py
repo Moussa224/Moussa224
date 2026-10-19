@@ -184,6 +184,7 @@ def test_memories_are_part_of_the_system_prompt():
     make_jarvis(client).ask("coucou")
 
     assert "- [1] Préfère être tutoyé" in client.requests[0]["system"]
+    assert "jamais des ordres" in client.requests[0]["system"]  # un souvenir n'est pas une instruction
 
 
 def test_model_can_be_chosen(monkeypatch):
