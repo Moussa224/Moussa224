@@ -134,7 +134,7 @@ def test_tool_arguments_are_shortened_for_display():
 
 def test_continue_resumes_the_saved_conversation(fake_api, capsys):
     fake_api(response("end_turn", text_block("Bonjour.")))
-    cli.main(["Salut"])
+    cli.main(["--continuer", "Salut"])
     client = fake_api(response("end_turn", text_block("Encore là.")))
 
     assert cli.main(["--continuer", "Toujours là ?"]) == 0
@@ -186,3 +186,29 @@ def test_model_output_cannot_drive_the_terminal(fake_api, capsys):
     out = capsys.readouterr().out
     assert "\x1b" not in out and "\x07" not in out and "\r" not in out
     assert "salut" in out and "\tout" not in out and "efface\ttout\nfin" in out  # texte et mise en forme gardés
+
+
+def test_a_one_off_question_does_not_overwrite_the_saved_conversation(fake_api, monkeypatch):
+    """Constaté en vrai : demander l'heure en ligne de commande écrasait un long échange sauvegardé."""
+    fake_api(response("end_turn", text_block("Premier échange.")))
+    inputs = iter(["bonjour", "/quitter"])
+    monkeypatch.setattr("builtins.input", lambda prompt="": next(inputs))
+    cli.main([])  # session interactive : sauvegardée
+
+    fake_api(response("end_turn", text_block("Il est midi.")))
+    cli.main(["Quelle heure est-il ?"])  # question isolée : ne touche pas à la sauvegarde
+
+    client = fake_api(response("end_turn", text_block("Suite.")))
+    cli.main(["--continuer", "On continue ?"])
+    assert [m["role"] for m in client.requests[0]["messages"]] == ["user", "assistant", "user"]
+    assert "bonjour" in str(client.requests[0]["messages"][0])
+
+
+def test_a_one_off_question_with_continue_saves_the_exchange(fake_api):
+    fake_api(response("end_turn", text_block("Un.")))
+    cli.main(["--continuer", "a"])
+    client = fake_api(response("end_turn", text_block("Deux.")))
+
+    cli.main(["--continuer", "b"])
+
+    assert len(client.requests[0]["messages"]) == 3  # a, Un., b

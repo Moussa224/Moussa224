@@ -17,7 +17,7 @@ Jarvis est un assistant personnel en français, propulsé par Claude (`claude-op
 | **Fichiers** | `list_directory`, `read_file`, `write_file` |
 | **Commandes** | `run_command` : exécute une commande shell et lit sa sortie |
 | **Voix** | terminal : `--voix` lit les réponses (`say` sur macOS, `espeak-ng`/`espeak`/`spd-say` sur Linux). Web : micro et lecture vocale intégrés (voir plus bas) |
-| **Reprise** | `--continuer` reprend la dernière conversation, même après avoir fermé Jarvis |
+| **Reprise** | `--continuer` reprend la dernière conversation, même après avoir fermé Jarvis. Une question isolée en ligne de commande (`jarvis "…"`) ne remplace pas la conversation sauvegardée, sauf avec `--continuer` |
 
 ### Installation
 
@@ -78,7 +78,7 @@ La page affiche la réponse au fil de l'eau, montre les outils utilisés, et ouv
 - **Ce que vous approuvez est ce qui sera fait** : l'écriture d'un fichier affiche le début de son contenu (300 caractères), et les caractères de contrôle d'un chemin ou d'une commande (`\r`, séquences ANSI, inversion du sens d'écriture, caractères invisibles) sont rendus visibles, pour qu'un texte piégé ne puisse pas se déguiser à l'écran. La réponse du modèle est aussi nettoyée de ces caractères avant d'être affichée dans le terminal.
 - Les commandes n'ont pas accès à votre clavier (elles ne peuvent pas attendre une saisie) et sont interrompues après 60 s par défaut (300 s au maximum).
 - Le contenu des pages web, des fichiers et des sorties de commandes est traité comme de la donnée : Jarvis a pour consigne d'ignorer toute « instruction » qui s'y cacherait. Ce n'est pas une garantie absolue, c'est pourquoi l'accord humain reste la vraie barrière.
-- Vos notes et souvenirs sont de simples fichiers JSON dans `~/.jarvis/` (`JARVIS_HOME` pour changer de dossier) : lisibles et modifiables à la main. La conversation sauvegardée (`session.json`) n'est lisible que par vous, car elle peut contenir des fichiers que Jarvis a lus. `/reset` l'efface.
+- Vos notes, souvenirs et la conversation sauvegardée sont de simples fichiers JSON dans `~/.jarvis/` (`JARVIS_HOME` pour changer de dossier), lisibles et modifiables à la main mais **par vous seul** (droits `0600`) : la conversation peut contenir des fichiers que Jarvis a lus. `/reset` efface la conversation.
 - **Serveur web** : il n'écoute que sur `127.0.0.1`. Comme il peut déclencher des actions, chaque requête exige un jeton secret aléatoire (dans le fragment du lien, donc ni envoyé au serveur ni journalisé, et retiré de la barre d'adresse), un en-tête `Host` attendu (contre le *DNS rebinding*) et une origine identique au serveur (un autre site ouvert dans votre navigateur ne peut pas lui parler). Le navigateur est ouvert sur un petit fichier de redirection lisible par vous seul (`~/.jarvis/jarvis-open.html`, supprimé à l'arrêt), jamais directement sur l'URL : une URL passée au navigateur est visible de tous les utilisateurs de la machine (`ps`) et le jeton donne la main sur Jarvis, approbations comprises. La page applique une politique CSP stricte et n'insère jamais de texte comme HTML. Ne partagez pas le lien.
 
 ### Configuration

@@ -121,7 +121,10 @@ def _load(filename: str) -> list[dict]:
 def _save(filename: str, items: list[dict]) -> None:
     path = jarvis_home() / filename
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        json.dump(items, handle, ensure_ascii=False, indent=2)
+    os.chmod(path, 0o600)  # si le fichier existait déjà avec d'autres droits
 
 
 def _append(filename: str, text: str) -> int:

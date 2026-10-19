@@ -258,3 +258,18 @@ def test_ordinary_files_are_still_free_to_read(workdir):
     (workdir / "cle.txt").write_text("doc")
     assert tools.execute("read_file", {"path": "environnement.md"}) == ("doc", False)
     assert tools.execute("read_file", {"path": "cle.txt"}) == ("doc", False)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="droits POSIX")
+def test_notes_and_memory_are_readable_by_their_owner_only(isolated_environment):
+    """Notes et souvenirs sont des données personnelles : comme la conversation, en 0600."""
+    import stat
+
+    tools.execute("add_note", {"text": "acheter du pain"})
+    tools.execute("remember", {"fact": "Préfère être tutoyé"})
+    (isolated_environment / "notes.json").chmod(0o644)  # un ancien fichier aux droits trop larges
+
+    tools.execute("add_note", {"text": "appeler Awa"})
+
+    for name in ("notes.json", "memory.json"):
+        assert stat.S_IMODE((isolated_environment / name).stat().st_mode) == 0o600

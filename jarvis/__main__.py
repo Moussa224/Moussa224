@@ -41,12 +41,13 @@ def ask_confirmation(question: str) -> bool:
 class Session:
     """Relie Jarvis au terminal : affichage, voix, gestion des erreurs."""
 
-    def __init__(self, model: str | None, web: bool, speak: bool):
+    def __init__(self, model: str | None, web: bool, speak: bool, persist: bool = True):
         self.speak = speak
         self.reply: list[str] = []
         self.jarvis = Jarvis(
             model=model,
             web=web,
+            persist=persist,
             on_text=self._on_text,
             on_tool=lambda name, args: print(
                 style(f"\n  ⚙ {name} {short(args)}", "2", sys.stderr), file=sys.stderr
@@ -119,7 +120,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        session = Session(args.modele, web=not args.sans_web, speak=args.voix)
+        # Une question isolée ne remplace pas la conversation sauvegardée, sauf avec --continuer.
+        persist = not args.question or args.continuer
+        session = Session(args.modele, web=not args.sans_web, speak=args.voix, persist=persist)
     except anthropic.AnthropicError as exc:
         print(f"[{describe_error(exc)}]", file=sys.stderr)
         return 1
