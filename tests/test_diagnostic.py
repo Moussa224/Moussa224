@@ -95,6 +95,37 @@ def test_a_bad_model_or_tool_definition_is_reported_with_the_api_message():
     assert not ready and "Erreur de l'API (404) : model: claude-inconnu" in report
 
 
+def api_error_with_body(kind, status, message):
+    """Une erreur comme le SDK la construit vraiment : message préfixé et corps JSON."""
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    body = {"type": "error", "error": {"type": "invalid_request_error", "message": message}}
+    return kind(f"Error code: {status} - {body}", response=httpx2.Response(status, request=request), body=body)
+
+
+def test_an_empty_balance_is_explained_not_dumped():
+    """Cas réel, rencontré avec une vraie clé : l'API répond 400 « credit balance is too low »."""
+    api = FakeApi(
+        api_error_with_body(
+            anthropic.BadRequestError,
+            400,
+            "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade.",
+        )
+    )
+
+    ready, report = run(api)
+
+    assert not ready and "n'a plus de crédits" in report and "Plans & Billing" in report
+    assert "Error code" not in report and "request_id" not in report
+
+
+def test_other_api_errors_show_the_api_message_without_the_sdk_prefix():
+    api = FakeApi(api_error_with_body(anthropic.NotFoundError, 404, "model: claude-inconnu"))
+
+    _, report = run(api)
+
+    assert "Erreur de l'API (404) : model: claude-inconnu" in report and "Error code" not in report
+
+
 def test_a_key_without_a_workspace_gets_an_actionable_message():
     """Une clé non liée à un workspace est refusée (400) : le message doit dire quoi faire."""
     api = FakeApi(

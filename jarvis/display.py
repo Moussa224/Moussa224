@@ -15,6 +15,14 @@ def is_missing_credentials(exc: Exception) -> bool:
     return isinstance(exc, TypeError) and "authentication method" in str(exc)
 
 
+def _api_message(exc: anthropic.APIStatusError) -> str:
+    """Le message de l'API lui-même, sans le préfixe « Error code: 400 - {...} » du SDK."""
+    error = exc.body.get("error") if isinstance(exc.body, dict) else None
+    if isinstance(error, dict) and isinstance(error.get("message"), str):
+        return error["message"]
+    return str(exc.message)
+
+
 def describe_error(exc: Exception) -> str:
     if is_missing_credentials(exc):
         return "Aucune clé API. Définissez ANTHROPIC_API_KEY (voir le README)."
@@ -28,13 +36,19 @@ def describe_error(exc: Exception) -> str:
         return "Clé API refusée. Vérifiez ANTHROPIC_API_KEY."
     if isinstance(exc, anthropic.RateLimitError):
         return "Trop de requêtes. Réessayez dans un instant."
-    if isinstance(exc, anthropic.BadRequestError) and "anthropic-workspace-id" in str(exc.message):
-        return (
-            "Votre clé API peut servir sur plusieurs workspaces : recréez-la en choisissant un workspace "
-            "(platform.claude.com/settings/keys)."
-        )
     if isinstance(exc, anthropic.APIStatusError):
-        return f"Erreur de l'API ({exc.status_code}) : {exc.message}"
+        message = _api_message(exc)
+        if "credit balance is too low" in message.lower():
+            return (
+                "Votre compte Anthropic n'a plus de crédits : ajoutez-en dans la console "
+                "(platform.claude.com, Plans & Billing)."
+            )
+        if "anthropic-workspace-id" in message:
+            return (
+                "Votre clé API peut servir sur plusieurs workspaces : recréez-la en choisissant un workspace "
+                "(platform.claude.com/settings/keys)."
+            )
+        return f"Erreur de l'API ({exc.status_code}) : {message}"
     if isinstance(exc, anthropic.APIConnectionError):
         return "Connexion impossible. Vérifiez votre réseau."
     return str(exc)
