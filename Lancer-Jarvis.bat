@@ -11,6 +11,20 @@ echo   Jarvis - installation et lancement
 echo ================================================
 echo.
 
+rem --- 0. Le projet doit etre extrait du ZIP ------------------------
+if not exist "jarvis\__main__.py" (
+  echo.
+  echo Le dossier jarvis est introuvable a cote de ce fichier.
+  echo Vous l'avez probablement ouvert depuis l'interieur du ZIP, sans l'extraire.
+  echo.
+  echo 1. Fermez cette fenetre.
+  echo 2. Clic droit sur le fichier ZIP, puis Extraire tout.
+  echo 3. Ouvrez le dossier extrait et double-cliquez de nouveau sur ce fichier.
+  echo.
+  pause
+  exit /b 1
+)
+
 rem --- 1. Python 3.10 ou plus ------------------------------------------
 set "PY="
 for %%C in (python py) do (

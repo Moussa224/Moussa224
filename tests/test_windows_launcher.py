@@ -53,6 +53,15 @@ def test_it_does_what_it_promises(launcher):
         assert command in text
 
 
+@LAUNCHERS
+def test_a_launcher_run_outside_the_project_folder_explains_what_to_do(launcher):
+    """Constaté : un .bat ouvert depuis l'intérieur du ZIP tourne seul, sans le dossier `jarvis`."""
+    text = content(launcher)
+    guard = text.index('if not exist "jarvis\\__main__.py"')
+    assert guard < text.index("sys.version_info") < text.index("pip install")  # avant toute installation
+    assert "Extraire tout" in text[guard : guard + 600] and "exit /b 1" in text[guard : guard + 600]
+
+
 def test_the_claude_launcher_asks_for_the_anthropic_key():
     assert "ANTHROPIC_API_KEY" in content(CLAUDE)
 
