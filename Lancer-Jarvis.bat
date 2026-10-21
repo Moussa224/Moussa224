@@ -2,6 +2,8 @@
 setlocal EnableExtensions
 title Jarvis
 cd /d "%~dp0"
+rem Ce lanceur utilise Claude : une passerelle reglee pour l'autre lanceur est ignoree.
+set "JARVIS_GATEWAY_URL="
 
 echo.
 echo ================================================

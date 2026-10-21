@@ -5,6 +5,7 @@ import unicodedata
 import anthropic
 
 from .errors import JarvisLoopLimit, JarvisRefusal, JarvisTruncated
+from .gateway import KEY_VARIABLE
 
 #: Erreurs qu'un tour de conversation peut lever et qu'on explique à l'utilisateur.
 TURN_ERRORS = (anthropic.AnthropicError, JarvisRefusal, JarvisTruncated, JarvisLoopLimit)
@@ -23,7 +24,8 @@ def _api_message(exc: anthropic.APIStatusError) -> str:
     return str(exc.message)
 
 
-def describe_error(exc: Exception) -> str:
+def describe_error(exc: Exception, gateway: str | None = None) -> str:
+    """Explication d'une erreur ; `gateway` (adresse) adapte les conseils au mode passerelle."""
     if is_missing_credentials(exc):
         return "Aucune clé API. Définissez ANTHROPIC_API_KEY (voir JARVIS.md)."
     if isinstance(exc, JarvisRefusal):
@@ -33,6 +35,8 @@ def describe_error(exc: Exception) -> str:
     if isinstance(exc, JarvisLoopLimit):
         return "Trop d'étapes pour une seule demande. Pouvez-vous la simplifier ?"
     if isinstance(exc, anthropic.AuthenticationError):
+        if gateway:
+            return f"Clé de la passerelle refusée. Vérifiez {KEY_VARIABLE} (clé affichée par FreeLLMAPI)."
         return "Clé API refusée. Vérifiez ANTHROPIC_API_KEY."
     if isinstance(exc, anthropic.RateLimitError):
         return "Trop de requêtes. Réessayez dans un instant."
@@ -50,6 +54,8 @@ def describe_error(exc: Exception) -> str:
             )
         return f"Erreur de l'API ({exc.status_code}) : {message}"
     if isinstance(exc, anthropic.APIConnectionError):
+        if gateway:
+            return f"Connexion impossible à la passerelle {gateway}. FreeLLMAPI est-il lancé ?"
         return "Connexion impossible. Vérifiez votre réseau."
     return str(exc)
 

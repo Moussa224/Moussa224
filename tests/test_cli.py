@@ -159,7 +159,7 @@ def test_web_option_starts_the_local_server(monkeypatch):
 
     assert cli.main(["--web", "--port", "9000", "--sans-web", "--continuer", "--sans-navigateur"]) == 0
 
-    assert started["args"] == (9000, {"model": None, "web": False})
+    assert started["args"] == (9000, {"model": None, "web": False, "gateway": None})
     assert started["kwargs"] == {"resume": True, "open_browser": False}
 
 

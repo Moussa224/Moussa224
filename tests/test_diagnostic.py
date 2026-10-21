@@ -7,7 +7,7 @@ from conftest import FakeClient
 
 import jarvis.agent
 from jarvis import __main__ as cli
-from jarvis import diagnostic, voice
+from jarvis import diagnostic, tools, voice
 
 
 def api_error(kind, status, message="refus"):
@@ -60,8 +60,8 @@ def test_probe_sends_the_very_same_request_as_jarvis():
         return jarvis.agent.Jarvis(client=FakeClient(), web=web, persist=False).request(diagnostic.PROBE, 16)
 
     local, with_web = api.calls
-    assert local == real(web=False)
     assert with_web == real(web=True)
+    assert local == {**real(web=True), "tools": tools.TOOLS}  # mêmes réglages, sans les outils web
     assert local["max_tokens"] == 16 and local["model"] == "claude-opus-5-5"
 
 

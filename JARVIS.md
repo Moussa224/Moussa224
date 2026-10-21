@@ -86,10 +86,33 @@ La page affiche la réponse au fil de l'eau, montre les outils utilisés, et ouv
 
 | Variable | Rôle |
 |---|---|
-| `ANTHROPIC_API_KEY` | clé API (obligatoire) |
-| `JARVIS_MODEL` | modèle par défaut (sinon `claude-opus-5-5`) ; `--modele` est prioritaire |
+| `ANTHROPIC_API_KEY` | clé API (obligatoire, sauf en mode passerelle) |
+| `JARVIS_MODEL` | modèle par défaut (sinon `claude-opus-5-5`, ou `claude-sonnet-5-5` en mode passerelle) ; `--modele` est prioritaire |
+| `JARVIS_GATEWAY_URL` | adresse d'une passerelle (voir ci-dessous) ; `--passerelle` est prioritaire |
+| `JARVIS_GATEWAY_KEY` | clé de la passerelle |
 | `JARVIS_HOME` | dossier des notes et souvenirs (sinon `~/.jarvis`) |
 | `NO_COLOR` | désactive les couleurs dans le terminal |
+
+## Mode passerelle : FreeLLMAPI
+
+[FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi) est une application locale qui répartit vos requêtes entre des fournisseurs d'IA gratuits (avec vos propres clés gratuites). Elle comprend le format de l'API Claude : Jarvis peut donc lui parler au lieu de parler à Anthropic.
+
+**Windows** : installez FreeLLMAPI (`FreeLLMAPI-Setup-….exe` sur sa page *Releases*), ajoutez au moins une clé de fournisseur gratuit dans sa page **Clés**, puis double-cliquez sur **`Lancer-Jarvis-Gratuit.bat`**. Il demande l'adresse (bouton « Copier l'URL de base ») et la clé (« Copier la clé API ») du tableau de bord, puis propose le même menu que `Lancer-Jarvis.bat`. Il ne les garde sur l'ordinateur que si vous répondez « O ». `Lancer-Jarvis.bat` ignore toute passerelle : il reste sur Claude.
+
+**Terminal** :
+
+```bash
+export JARVIS_GATEWAY_KEY=freellmapi-...
+jarvis --passerelle http://127.0.0.1:3001 --diagnostic   # vérifie la liaison
+jarvis --passerelle http://127.0.0.1:3001
+```
+
+À savoir :
+- L'adresse peut être copiée avec ou sans `/v1` final, et sans `http://`.
+- Les identifiants `ANTHROPIC_*` ne sont jamais envoyés à la passerelle.
+- Pas de recherche web (c'est un outil d'Anthropic) ni de réflexion étendue. Jarvis le sait et le dit au lieu d'inventer.
+- La qualité dépend des modèles gratuits que FreeLLMAPI choisit : plus lents, parfois moins fiables, surtout pour les outils (fichiers, commandes). Les approbations d'actions restent les mêmes.
+- Vos questions partent chez les fournisseurs que vous avez activés dans FreeLLMAPI.
 
 ## Ajouter un outil
 

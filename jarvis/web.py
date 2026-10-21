@@ -79,11 +79,11 @@ class WebApp:
         try:
             self.jarvis.ask(message)
         except TURN_ERRORS as exc:
-            self._emit(type="error", message=describe_error(exc))
+            self._emit(type="error", message=describe_error(exc, self.jarvis.gateway))
         except TypeError as exc:
             if not is_missing_credentials(exc):
                 raise
-            self._emit(type="error", message=describe_error(exc))
+            self._emit(type="error", message=describe_error(exc, self.jarvis.gateway))
         else:
             self._emit(type="done")
 
