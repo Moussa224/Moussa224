@@ -66,6 +66,24 @@ def test_the_claude_launcher_asks_for_the_anthropic_key():
     assert "ANTHROPIC_API_KEY" in content(CLAUDE)
 
 
+def test_the_claude_launcher_lets_the_user_pick_a_cheaper_model():
+    text = content(CLAUDE)
+    assert {"modele", "sonnet", "haiku"} <= set(re.findall(r"^:(\w+)\s*$", text, flags=re.MULTILINE))
+    for model in ("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"):
+        assert f'set "JARVIS_MODEL={model}"' in text
+    assert "choice /c 12345" in text and "goto modele" in text
+    # le choix par défaut reste Opus, et il est posé avant le menu (jamais écrasé s'il est déjà réglé)
+    assert text.index('if not defined JARVIS_MODEL set "JARVIS_MODEL=claude-opus-5-5"') < text.index(":menu")
+    assert "recherche web" in text  # Haiku n'a pas la recherche web : l'écran le dit
+
+
+def test_the_menu_numbers_people_already_know_did_not_move():
+    menu = content(CLAUDE).split(":menu")[1].split("choice")[0]
+    assert re.findall(r"^echo\s+(\d)\s+(\w+)", menu, flags=re.MULTILINE)[:3] == [
+        ("1", "Verifier"), ("2", "Ouvrir"), ("3", "Parler"),
+    ]  # fmt: skip
+
+
 def test_the_claude_launcher_ignores_a_gateway_set_for_the_other_launcher():
     """Sinon, Jarvis resterait branché sur FreeLLMAPI alors qu'on a lancé la version Claude."""
     text = content(CLAUDE)

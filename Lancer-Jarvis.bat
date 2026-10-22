@@ -83,6 +83,8 @@ if defined ASKED (
   )
 )
 
+if not defined JARVIS_MODEL set "JARVIS_MODEL=claude-opus-5-5"
+
 :menu
 echo.
 echo ------------------------------------------------
@@ -90,10 +92,12 @@ echo   Que voulez-vous faire ?
 echo   1  Verifier que tout fonctionne
 echo   2  Ouvrir Jarvis dans le navigateur
 echo   3  Parler a Jarvis dans cette fenetre
-echo   4  Quitter
+echo   4  Changer de modele - actuel : %JARVIS_MODEL%
+echo   5  Quitter
 echo ------------------------------------------------
-choice /c 1234 /n /m "Votre choix : "
-if errorlevel 4 goto fin
+choice /c 12345 /n /m "Votre choix : "
+if errorlevel 5 goto fin
+if errorlevel 4 goto modele
 if errorlevel 3 goto terminal
 if errorlevel 2 goto web
 if errorlevel 1 goto diag
@@ -119,6 +123,32 @@ goto menu
 :terminal
 echo.
 %PY% -m jarvis
+goto menu
+
+:modele
+echo.
+echo ------------------------------------------------
+echo   Quel modele ? Actuel : %JARVIS_MODEL%
+echo   1  Opus 5.5     le plus capable, le plus cher, avec recherche web
+echo   2  Sonnet 5.5   tres bon et moins cher, avec recherche web
+echo   3  Haiku 5.5    le plus economique, sans recherche web
+echo   4  Retour
+echo ------------------------------------------------
+choice /c 1234 /n /m "Votre choix : "
+if errorlevel 4 goto menu
+if errorlevel 3 goto haiku
+if errorlevel 2 goto sonnet
+set "JARVIS_MODEL=claude-opus-5-5"
+goto menu
+
+:sonnet
+set "JARVIS_MODEL=claude-sonnet-5-5"
+goto menu
+
+:haiku
+set "JARVIS_MODEL=claude-haiku-5-5"
+echo.
+echo Pensez a choisir 1 pour verifier : c'est la qu'on voit si ce modele repond bien.
 goto menu
 
 :fin
