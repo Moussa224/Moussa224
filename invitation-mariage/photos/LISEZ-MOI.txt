@@ -1,0 +1,20 @@
+VOS PHOTOS
+==========
+
+Remplacez simplement ces fichiers par les vôtres, en gardant EXACTEMENT les mêmes noms :
+
+  hero.jpg         photo d'accueil, plein écran (format vertical, idéalement 1200 x 1800 px)
+  galerie-1.jpg    }
+  galerie-2.jpg    }  les 6 photos de la galerie
+  galerie-3.jpg    }  (environ 1000 px sur le grand côté suffisent)
+  galerie-4.jpg    }
+  galerie-5.jpg    }
+  galerie-6.jpg    }
+
+IMPORTANT POUR LA RAPIDITÉ
+Les photos de téléphone pèsent souvent 3 à 8 Mo : c'est trop lourd.
+Visez 150 à 400 Ko par photo. Redimensionnez-les gratuitement sur https://squoosh.app
+(format JPEG ou WebP, qualité 75 %) avant de les mettre ici.
+
+Si vous préférez un autre nom ou le format .webp, changez-le aussi dans contenu.js
+(rubrique « galerie ») et dans index.html pour la photo d'accueil (hero).

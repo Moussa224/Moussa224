@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Invitation de mariage</title>
+  <meta name="description" content="Vous êtes invités à notre mariage. Ouvrez l'enveloppe pour découvrir notre invitation.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#3B2418">
+  <meta name="color-scheme" content="light">
+
+  <!-- Aperçu quand le lien est partagé (WhatsApp, iMessage...). Modifiez à votre goût. -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Notre invitation de mariage">
+  <meta property="og:description" content="Ouvrez l'enveloppe pour découvrir notre invitation.">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23B5573A'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23F6EFE4' font-family='Georgia,serif' font-style='italic'%3E%26%3C/text%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400..600&family=Cinzel:wght@400..600&family=Jost:wght@300..500&family=Pinyon+Script&display=swap">
+  <link rel="preload" as="image" href="photos/hero.jpg" fetchpriority="high">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="is-locked">
+
+  <noscript>
+    <p style="position:fixed;inset:0;z-index:999;display:grid;place-items:center;margin:0;padding:24px;background:#3B2418;color:#F6EFE4;font:1rem/1.6 system-ui,sans-serif;text-align:center">
+      Merci d'activer JavaScript pour ouvrir notre invitation.
+    </p>
+  </noscript>
+
+  <!-- ===================== OUVERTURE : l'enveloppe ===================== -->
+  <div class="intro" id="intro" role="dialog" aria-modal="true" aria-label="Invitation de mariage">
+    <div class="intro__stage">
+
+      <div class="intro__head">
+        <p class="intro__names script" data-names></p>
+        <p class="intro__hint" data-txt="enveloppe.indice"></p>
+      </div>
+
+      <div class="envelope" id="envelope">
+        <div class="env__shadow"></div>
+        <div class="env__back"></div>
+
+        <div class="card" aria-hidden="true">
+          <div class="card__inner">
+            <p class="card__eyebrow" data-txt="carte.surtitre"></p>
+            <p class="card__names script" data-names></p>
+            <p class="card__date" data-date></p>
+          </div>
+        </div>
+
+        <div class="env__front env__front--left"></div>
+        <div class="env__front env__front--right"></div>
+        <div class="env__front env__front--bottom"></div>
+
+        <div class="flap">
+          <div class="flap__face flap__face--out"></div>
+          <div class="flap__face flap__face--in"></div>
+        </div>
+
+        <div class="seal" aria-hidden="true">
+          <span class="seal__half seal__half--l"><span class="seal__face"><b data-seal></b></span></span>
+          <span class="seal__half seal__half--r"><span class="seal__face"><b data-seal></b></span></span>
+        </div>
+      </div>
+
+      <button class="btn btn--intro" id="openBtn" type="button" data-txt="enveloppe.texteBouton"></button>
+    </div>
+  </div>
+
+  <!-- ===================== LE SITE ===================== -->
+  <main class="site" id="site" tabindex="-1">
+
+    <!-- 1. ACCUEIL -->
+    <header class="hero" id="accueil">
+      <div class="hero__media">
+        <img src="photos/hero.jpg" width="1080" height="1620" alt="Les mariés" fetchpriority="high" decoding="async">
+      </div>
+      <div class="hero__shade"></div>
+
+      <div class="hero__content">
+        <p class="eyebrow eyebrow--light reveal" style="--d:.2s" data-txt="accueil.surtitre"></p>
+
+        <h1 class="hero__names script">
+          <span class="line split" style="--d:.45s" data-txt="prenom1"></span>
+          <span class="amp reveal" style="--d:.9s">&amp;</span>
+          <span class="line split" style="--d:1.05s" data-txt="prenom2"></span>
+        </h1>
+
+        <p class="hero__phrase reveal" style="--d:1.4s" data-txt="accueil.phrase"></p>
+        <p class="hero__date reveal" style="--d:1.65s" data-date></p>
+
+        <div class="reveal" style="--d:1.9s">
+          <p class="countdown__title" data-txt="accueil.compteReboursTitre"></p>
+          <div class="countdown" id="countdown" role="timer" aria-label="Compte à rebours jusqu'au mariage">
+            <div class="cd"><span class="cd__n" data-cd="d">00</span><span class="cd__l">Jours</span></div>
+            <div class="cd"><span class="cd__n" data-cd="h">00</span><span class="cd__l">Heures</span></div>
+            <div class="cd"><span class="cd__n" data-cd="m">00</span><span class="cd__l">Minutes</span></div>
+            <div class="cd"><span class="cd__n" data-cd="s">00</span><span class="cd__l">Secondes</span></div>
+          </div>
+          <p class="countdown__done" id="countdownDone" hidden data-txt="accueil.jourJ"></p>
+        </div>
+      </div>
+
+      <span class="hero__cue" aria-hidden="true"></span>
+    </header>
+
+    <!-- 2. NOTRE HISTOIRE -->
+    <section class="section" id="histoire">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow reveal" data-txt="histoire.surtitre"></p>
+          <h2 class="title split" data-txt="histoire.titre"></h2>
+          <span class="ornament reveal" aria-hidden="true"></span>
+        </div>
+        <div class="timeline" id="timeline">
+          <span class="timeline__track" aria-hidden="true"></span>
+          <span class="timeline__line" aria-hidden="true"></span>
+          <span class="timeline__tip" aria-hidden="true"></span>
+          <ol class="timeline__list" id="timelineList"></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. GALERIE -->
+    <section class="section section--soft" id="galerie">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow reveal" data-txt="galerie.surtitre"></p>
+          <h2 class="title split" data-txt="galerie.titre"></h2>
+          <span class="ornament reveal" aria-hidden="true"></span>
+        </div>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </section>
+
+    <!-- 4. LE PROGRAMME -->
+    <section class="section" id="programme">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow reveal" data-txt="programme.surtitre"></p>
+          <h2 class="title split" data-txt="programme.titre"></h2>
+          <span class="ornament reveal" aria-hidden="true"></span>
+        </div>
+        <ol class="schedule" id="schedule"></ol>
+      </div>
+    </section>
+
+    <!-- 5. LE LIEU -->
+    <section class="section section--soft" id="lieu">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow reveal" data-txt="lieuSection.surtitre"></p>
+          <h2 class="title split" data-txt="lieuSection.titre"></h2>
+          <span class="ornament reveal" aria-hidden="true"></span>
+        </div>
+
+        <div class="venue reveal">
+          <h3 class="venue__name" data-txt="lieu.salle"></h3>
+          <address class="venue__addr"><span data-txt="lieu.adresse"></span><br><span data-txt="lieu.ville"></span></address>
+          <div class="venue__map">
+            <iframe id="mapFrame" title="Carte Google Maps du lieu" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+          <a class="btn btn--solid" id="routeBtn" href="#" target="_blank" rel="noopener" data-txt="lieuSection.texteBouton"></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. TENUE -->
+    <section class="section" id="tenue">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow reveal" data-txt="tenue.surtitre"></p>
+          <h2 class="title split" data-txt="tenue.titre"></h2>
+          <span class="ornament reveal" aria-hidden="true"></span>
+        </div>
+        <p class="lead reveal" data-txt="tenue.texte"></p>
+        <ul class="swatches" id="swatches"></ul>
+      </div>
+    </section>
+
+    <!-- 7. CONFIRMER MA PRÉSENCE -->
+    <section class="section section--terra" id="rsvp">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow eyebrow--light reveal" data-txt="rsvp.surtitre"></p>
+          <h2 class="title split" data-txt="rsvp.titre"></h2>
+          <span class="ornament ornament--light reveal" aria-hidden="true"></span>
+        </div>
+        <p class="lead lead--light reveal" data-txt="rsvp.texte"></p>
+        <div class="rsvp__cta reveal">
+          <a class="btn btn--light" id="rsvpBtn" href="#" target="_blank" rel="noopener" data-txt="rsvp.texteBouton"></a>
+          <p class="rsvp__deadline" id="rsvpDeadline"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. PIED DE PAGE -->
+    <footer class="footer">
+      <p class="footer__msg split" data-txt="pied.message"></p>
+      <p class="footer__ini script reveal" style="--d:.4s" data-initiales></p>
+      <p class="footer__tag reveal" style="--d:.7s" data-txt="hashtag"></p>
+    </footer>
+
+  </main>
+
+  <script src="contenu.js"></script>
+  <script src="script.js" defer></script>
+</body>
+</html>
