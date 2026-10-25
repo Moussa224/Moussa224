@@ -1,0 +1,18 @@
+PHOTOS DE LA COLLECTION
+=======================
+
+Déposez ici vos images, puis indiquez leur nom dans ../contenu.js :
+
+  - Logo           ->  logoImage: "photos/logo.png"
+  - Un vêtement    ->  photo: "photos/tee-craie.png"   (dans le bloc de la pièce)
+
+Pour un vêtement, la photo doit montrer la pièce ACCROCHÉE À SON CINTRE,
+cintre et crochet compris, comme sur le portant :
+
+  - fond transparent (PNG ou WebP) : un fond blanc se verrait sur la page ;
+  - le crochet du cintre centré tout en haut de l'image ;
+  - toutes les photos au même format, environ 800 x 1080 pixels (rapport 200:270) ;
+  - un nom de fichier simple, sans espace ni accent : tee-craie.png
+
+Une pièce sans photo, ou dont la photo est introuvable, garde son dessin :
+le site ne casse jamais.
