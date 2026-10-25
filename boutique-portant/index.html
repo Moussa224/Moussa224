@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Collection</title>
+  <meta name="description" content="Une collection en série limitée. Choisissez une pièce sur le portant et vérifiez sa disponibilité.">
+  <meta name="theme-color" content="#F4F4F1">
+  <meta name="color-scheme" content="light">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23B8F23C'/%3E%3Cpath d='M32 14v6m0 0a5 5 0 1 0-5-5M32 20 12 38h40Z' fill='none' stroke='%231F3D00' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titan+One&family=Inter:wght@400..600&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <noscript>
+    <p style="position:fixed;inset:0;z-index:999;display:grid;place-items:center;margin:0;padding:24px;background:#F4F4F1;color:#222;font:1rem/1.6 system-ui,sans-serif;text-align:center">
+      Merci d'activer JavaScript pour voir la collection.
+    </p>
+  </noscript>
+
+  <div class="page">
+
+    <header class="haut">
+      <button class="haut__lien haut__lien--gauche" type="button" data-ouvrir="dialogApropos" data-txt="apropos.titre"></button>
+      <h1 class="logo" data-logo></h1>
+      <a class="haut__lien haut__lien--droite" data-contact href="#">Contact</a>
+    </header>
+
+    <main class="vitrine">
+      <section class="portant" id="portant" aria-label="La collection">
+        <div class="portant__defile" id="defile">
+          <div class="portant__piste" id="piste">
+            <div class="portant__barre" aria-hidden="true">
+              <span class="portant__bout portant__bout--g"></span>
+              <span class="portant__tube"></span>
+              <span class="portant__bout portant__bout--d"></span>
+            </div>
+            <!-- Les cintres sont fabriqués par script.js à partir de contenu.js -->
+          </div>
+        </div>
+      </section>
+
+      <div class="legende" aria-live="polite">
+        <p class="legende__nom" id="legendeNom"></p>
+        <p class="legende__detail" id="legendeDetail"></p>
+      </div>
+
+      <button class="bouton" id="boutonDispo" type="button">
+        <span data-txt="contact.texteBouton"></span>
+      </button>
+    </main>
+
+    <p class="pied" data-txt="slogan"></p>
+  </div>
+
+  <!-- ===================== DISPONIBILITÉ ===================== -->
+  <dialog class="dialogue" id="dialogDispo" aria-labelledby="dispoTitre">
+    <form method="dialog" class="dialogue__fermer-form">
+      <button class="dialogue__fermer" aria-label="Fermer">×</button>
+    </form>
+    <p class="dialogue__surtitre" id="dispoNumero"></p>
+    <h2 class="dialogue__titre" id="dispoTitre"></h2>
+    <p class="dialogue__prix" id="dispoPrix"></p>
+    <p class="dialogue__label">Tailles</p>
+    <div class="tailles" id="dispoTailles" role="group" aria-label="Tailles"></div>
+    <a class="dialogue__cta" id="dispoCta" href="#" target="_blank" rel="noopener"></a>
+    <p class="dialogue__note" id="dispoNote"></p>
+  </dialog>
+
+  <!-- ===================== À PROPOS ===================== -->
+  <dialog class="dialogue" id="dialogApropos" aria-labelledby="aproposTitre">
+    <form method="dialog" class="dialogue__fermer-form">
+      <button class="dialogue__fermer" aria-label="Fermer">×</button>
+    </form>
+    <h2 class="dialogue__titre" id="aproposTitre" data-txt="apropos.titre"></h2>
+    <div class="dialogue__texte" id="aproposTexte"></div>
+  </dialog>
+
+  <script src="contenu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
