@@ -89,6 +89,14 @@ button { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 
+.logo--image {
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  transform: none;
+  line-height: 0;
+}
+.logo--image img { display: block; height: clamp(34px, 5vw, 52px); width: auto; }
+
 /* ============================ Vitrine ============================ */
 
 .vitrine {
@@ -182,7 +190,8 @@ button { font: inherit; color: inherit; }
   will-change: transform;
 }
 
-.cintre__svg {
+.cintre__svg,
+.cintre__photo {
   display: block;
   width: 100%;
   height: auto;
@@ -191,6 +200,14 @@ button { font: inherit; color: inherit; }
   filter: drop-shadow(0 12px 10px rgba(0, 0, 0, .13));
   animation: respire 5.5s ease-in-out infinite;
   animation-delay: calc(var(--i) * -0.9s);
+}
+
+.cintre__photo {
+  aspect-ratio: 200 / 270;
+  object-fit: contain;
+  object-position: 50% 0;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .cintre__etiquette {
@@ -383,6 +400,6 @@ button { font: inherit; color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   .cintre { animation: none; transition: none; }
-  .cintre__svg { animation: none; }
+  .cintre__svg, .cintre__photo { animation: none; }
   .dialogue[open] { animation: none; }
 }

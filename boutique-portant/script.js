@@ -36,7 +36,17 @@
       const v = get(B, el.dataset.txt);
       if (v != null) el.textContent = v;
     });
-    $$('[data-logo]').forEach((el) => { el.textContent = B.marque; });
+    $$('[data-logo]').forEach((el) => {
+      el.textContent = B.marque;
+      if (!B.logoImage) return;
+      el.classList.add('logo--image');
+      el.innerHTML = `<img src="${esc(B.logoImage)}" alt="${esc(B.marque)}">`;
+      // Image introuvable : on revient au nom écrit
+      $('img', el).addEventListener('error', () => {
+        el.classList.remove('logo--image');
+        el.textContent = B.marque;
+      }, { once: true });
+    });
     $$('[data-contact]').forEach((el) => { el.href = lienReservation(null).href; });
     $('#aproposTexte').innerHTML = B.apropos.texte.map((t) => `<p>${esc(t)}</p>`).join('');
   };
@@ -240,12 +250,22 @@
   const piste = $('#piste');
   const pieces = B.pieces;
 
+  const corps = (p, i) => (p.photo
+    ? `<img class="cintre__photo" src="${esc(p.photo)}" alt="" draggable="false">`
+    : dessiner(p, i));
+
   piste.insertAdjacentHTML('beforeend', pieces.map((p, i) => `
     <button class="cintre" type="button" data-i="${i}" style="--i:${i}"
             aria-label="${esc(p.nom)}, ${esc(p.prix)}">
-      <span class="cintre__corps">${dessiner(p, i)}</span>
+      <span class="cintre__corps">${corps(p, i)}</span>
       <span class="cintre__etiquette" aria-hidden="true">${esc(p.nom)}</span>
     </button>`).join(''));
+
+  /* Photo introuvable : on garde le dessin plutôt qu'un trou sur le portant */
+  $$('.cintre__photo', piste).forEach((img) => img.addEventListener('error', () => {
+    const i = Number(img.closest('.cintre').dataset.i);
+    img.outerHTML = dessiner(pieces[i], i);
+  }, { once: true }));
 
   const slots = $$('.cintre', piste);
   let actif = -1;

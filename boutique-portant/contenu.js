@@ -9,6 +9,9 @@ const BOUTIQUE = {
 
   /* ---------- La marque ---------- */
   marque: "TA MARQUE",
+  // Facultatif : votre logo en image (PNG ou SVG, fond transparent), ex. "photos/logo.png".
+  // Laissé vide, le nom de la marque s'écrit en grosses lettres vertes.
+  logoImage: "",
   slogan: "Collection en précommande",
 
   /* ---------- Réservation ----------
@@ -34,6 +37,9 @@ const BOUTIQUE = {
      accent   : deuxième couleur (manches, bandes, finitions)
      texte    : mot imprimé sur la poitrine (facultatif)
      use      : true pour un vêtement délavé, troué, « vintage »
+     photo    : facultatif — vraie photo du vêtement SUR SON CINTRE, fond transparent
+                (PNG ou WebP), ex. "photos/tee-craie.png". Elle remplace le dessin.
+                Voir photos/LISEZ-MOI.txt
      tailles  : les tailles proposées — mettre en `rupture` celles qui sont épuisées
      La pièce du milieu est affichée en grand à l'ouverture (ordre de la liste). */
   pieces: [
