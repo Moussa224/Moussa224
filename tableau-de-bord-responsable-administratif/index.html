@@ -8,11 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Mise en page : titre, synthèse (avancement + 4 compteurs), 6 cartes domaines, puis tableau des missions groupé par domaine */
+/* Mise en page : titre, onglets, puis par vue : synthèse (2 panneaux), points d'attention, domaines, indicateurs / missions / texte d'origine */
 :root{
   --bg:#f2f5f9; --surface:#ffffff; --ink:#142033; --muted:#566478; --line:#dce2eb;
   --accent:#1d4f91; --accent-soft:#e4edf9;
-  --good:#1c7a4b; --good-soft:#e1f3e8; --crit:#b3261e; --crit-soft:#fbe7e5; --track:#e6ebf2;
+  --good:#1c7a4b; --good-soft:#e1f3e8;
+  --warn:#8f5200; --warn-fill:#e0a02a; --warn-soft:#fdf0d5;
+  --crit:#b3261e; --crit-soft:#fbe7e5; --track:#e6ebf2;
   --font-display:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
@@ -21,14 +23,18 @@
   :root:not([data-theme="light"]){
     --bg:#0e1520; --surface:#151f2d; --ink:#e6ecf4; --muted:#93a0b4; --line:#26344a;
     --accent:#7fb0f0; --accent-soft:#1b2c45;
-    --good:#4fc58a; --good-soft:#133524; --crit:#ff8f86; --crit-soft:#3c1c1b; --track:#223049;
+    --good:#4fc58a; --good-soft:#133524;
+    --warn:#f2b45c; --warn-fill:#e0a02a; --warn-soft:#3b2d12;
+    --crit:#ff8f86; --crit-soft:#3c1c1b; --track:#223049;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0e1520; --surface:#151f2d; --ink:#e6ecf4; --muted:#93a0b4; --line:#26344a;
   --accent:#7fb0f0; --accent-soft:#1b2c45;
-  --good:#4fc58a; --good-soft:#133524; --crit:#ff8f86; --crit-soft:#3c1c1b; --track:#223049;
+  --good:#4fc58a; --good-soft:#133524;
+  --warn:#f2b45c; --warn-fill:#e0a02a; --warn-soft:#3b2d12;
+  --crit:#ff8f86; --crit-soft:#3c1c1b; --track:#223049;
   color-scheme:dark;
 }
 
@@ -36,304 +42,677 @@
 [hidden]{display:none !important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--font-body);font-variant-numeric:tabular-nums}
-h1,h2,h3,p{margin:0}
+h1,h2,h3,p,ul{margin:0}
+ul{padding:0;list-style:none}
 h1,h2,h3{font-family:var(--font-display);text-wrap:balance}
-.wrap{max-width:1120px;margin:0 auto;padding:28px clamp(16px,4vw,32px) 48px;display:flex;flex-direction:column;gap:24px}
+.wrap{max-width:1120px;margin:0 auto;padding:28px clamp(16px,4vw,32px) 48px;display:flex;flex-direction:column;gap:22px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
+/* Titre */
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
 .kicker{margin-bottom:6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 h1{font-size:clamp(28px,5vw,40px);line-height:1.1;font-weight:700}
 .lede{margin-top:8px;max-width:62ch;color:var(--muted)}
 h2{font-size:19px;font-weight:600}
-
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
 .btn{font:inherit;font-size:13px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.armed{border-color:var(--crit);color:var(--crit);background:var(--crit-soft)}
 
-/* Synthèse */
-.summary{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
-.progress .label{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+/* Onglets */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{font:inherit;font-weight:500;color:var(--muted);background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:10px 14px;cursor:pointer;white-space:nowrap}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.view{display:flex;flex-direction:column;gap:22px}
+
+.banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;padding:10px 14px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent);font-size:14px}
+
+/* Couleurs d'état (via --c) */
+.c-ok{--c:var(--good)} .c-watch{--c:var(--warn-fill)} .c-bad{--c:var(--crit)} .c-info{--c:var(--accent)} .c-none{--c:transparent}
+.s-ok{--ps:var(--good-soft);--pt:var(--good)} .s-watch{--ps:var(--warn-soft);--pt:var(--warn)}
+.s-bad{--ps:var(--crit-soft);--pt:var(--crit)} .s-none{--ps:var(--bg);--pt:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;background:var(--ps);color:var(--pt);border:1px solid color-mix(in srgb,var(--pt) 35%,transparent)}
+
+/* Panneaux de synthèse */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stat .label{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .big{display:flex;align-items:baseline;gap:10px;margin:6px 0 14px}
-.big strong{font:700 56px/1 var(--font-display)}
+.big strong{font:700 52px/1 var(--font-display)}
 .big span{color:var(--muted)}
-.hint{margin-top:12px;font-size:13px;color:var(--muted)}
 .bar{display:flex;height:10px;border-radius:5px;background:var(--track);overflow:hidden}
-.seg{height:100%}
-.seg.done{background:var(--good)}
-.seg.doing{background:var(--accent)}
-.seg.blocked{background:var(--crit)}
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:12px 14px}
-.tile b{display:block;font:700 30px/1.1 var(--font-display)}
-.tile span{font-size:13px;color:var(--muted)}
-.tile.todo{--c:var(--muted)} .tile.doing{--c:var(--accent)} .tile.done{--c:var(--good)} .tile.blocked{--c:var(--crit)}
+.seg{height:100%;background:var(--c)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:12px;font-size:13px;color:var(--muted)}
+.legend b{color:var(--ink);font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--c)}
+.dot.c-none{background:transparent;border:2px solid var(--muted)}
+
+.section-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin-bottom:12px}
+.section-head p{font-size:13px;color:var(--muted)}
+
+/* Points d'attention */
+.att-list{display:grid;gap:8px}
+.att{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:8px;border-left:4px solid var(--pt);background:var(--ps)}
+.att .pill{flex:none;background:var(--surface)}
+.att .t b{display:block;font-weight:600}
+.att .t span{font-size:13px;color:var(--muted)}
+.att-empty{color:var(--muted)}
+.copybox{width:100%;margin-top:12px;min-height:130px;font:13px/1.5 var(--font-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+.flash{font-size:13px;color:var(--muted);min-height:1.4em}
 
 /* Cartes domaines */
-.section-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;margin-bottom:12px}
-.section-head p{font-size:13px;color:var(--muted)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px}
 .card{font:inherit;color:inherit;text-align:left;display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;cursor:pointer}
 .card:hover{border-color:var(--accent)}
-.card[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-soft)}
 .card .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.card h3{font-size:17px;font-weight:600}
+.card .name{font:600 17px/1.25 var(--font-display)}
 .card .count{font-size:13px;color:var(--muted);white-space:nowrap}
-.card .kpi{margin-top:auto;font-size:12.5px;color:var(--muted)}
-.card .kpi b{display:block;font-weight:600;color:var(--ink);font-size:13.5px}
+.card .kpis{display:flex;align-items:center;gap:10px;margin-top:auto;font-size:12.5px;color:var(--muted)}
+.card .dots{display:flex;gap:6px}
+.card .dots .dot{margin:0;width:12px;height:12px}
 
-/* Tableau */
+/* Tableaux */
 .tablewrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:0}
-thead th{text-align:left;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
-tr.grp th{text-align:left;padding:10px 16px;background:var(--bg);border-top:1px solid var(--line);font:600 15px var(--font-display)}
-tr.grp th span{margin-left:8px;font:400 13px var(--font-body);color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--line)}
+tr.grp th{text-align:left;padding:10px 14px;background:var(--bg);border-top:1px solid var(--line);font:600 15px var(--font-display)}
 tbody:first-of-type tr.grp th{border-top:0}
-td{padding:12px 16px;vertical-align:top;border-top:1px solid var(--line)}
-td.m small{display:block;margin-top:2px;font-size:13px;color:var(--muted)}
+td{padding:12px 14px;vertical-align:top;border-top:1px solid var(--line)}
 td:first-child{box-shadow:inset 4px 0 0 var(--bar)}
+td.m small{display:block;margin-top:2px;font-size:13px;color:var(--muted)}
 .chip{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;white-space:nowrap}
+.note{font-size:13px;color:var(--muted);max-width:90ch}
+
 select.st{font:inherit;font-size:13.5px;font-weight:500;min-width:132px;padding:6px 10px;border-radius:8px;border:1px solid var(--stc);background-color:var(--sts);color:var(--stx);cursor:pointer}
-select.st option{background:var(--surface);color:var(--ink)}
+select option{background:var(--surface);color:var(--ink)}
 tr[data-state="todo"]{--bar:transparent;--stc:var(--line);--sts:var(--surface);--stx:var(--ink)}
 tr[data-state="doing"]{--bar:var(--accent);--stc:var(--accent);--sts:var(--accent-soft);--stx:var(--accent)}
 tr[data-state="done"]{--bar:var(--good);--stc:var(--good);--sts:var(--good-soft);--stx:var(--good)}
 tr[data-state="blocked"]{--bar:var(--crit);--stc:var(--crit);--sts:var(--crit-soft);--stx:var(--crit)}
-.note{font-size:13px;color:var(--muted);max-width:90ch}
+tr[data-s="ok"]{--bar:var(--good)} tr[data-s="watch"]{--bar:var(--warn-fill)} tr[data-s="bad"]{--bar:var(--crit)} tr[data-s="none"]{--bar:transparent}
 
-@media (max-width:820px){
-  .summary{grid-template-columns:1fr}
-}
+/* Indicateurs */
+.krow td{vertical-align:middle}
+.num{display:inline-flex;align-items:center;gap:4px}
+.num input{width:4.8em;font:inherit;padding:6px 8px;text-align:right;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.num .op,.num .u{font-size:13px;color:var(--muted)}
+.gap{white-space:nowrap}
+.bullet{position:relative;height:10px;min-width:100px;border-radius:5px;background:var(--track)}
+.bullet .fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--c)}
+.bullet .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+
+/* Barre d'outils missions */
+.tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.field select{font:inherit;font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:170px}
+.tools .count{margin-left:auto;font-size:13px;color:var(--muted)}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+
+/* Texte d'origine */
+.src li{display:grid;grid-template-columns:1fr auto;align-items:start;gap:4px 16px;padding:11px 16px;border-top:1px solid var(--line)}
+.src li:first-child{border-top:0}
+.src li.l1{padding-left:44px}
+.src .tag{font-size:12.5px;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;white-space:nowrap}
+
+@media (min-width:760px){ table{min-width:760px} }
+@media (max-width:820px){ .summary{grid-template-columns:1fr} }
 @media (max-width:759px){
   thead{display:none}
-  table,tbody,tr,td{display:block;width:100%}
-  tr.grp th{display:block}
-  tr.row{padding:12px 16px 14px;border-top:1px solid var(--line);box-shadow:inset 4px 0 0 var(--bar)}
-  td{padding:4px 0;border:0;box-shadow:none}
-  td:first-child{box-shadow:none}
-  td::before{content:attr(data-label);display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-  td.m::before{display:none}
-  td.m{font-weight:500}
-  .big strong{font-size:46px}
+  table,tbody,tr.grp,tr.grp th{display:block;width:100%}
+  tr.row{display:block;width:100%;padding:12px 16px 14px;border-top:1px solid var(--line);box-shadow:inset 4px 0 0 var(--bar)}
+  tr.row td{display:block;width:100%;padding:4px 0;border:0;box-shadow:none}
+  tr.krow{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+  tr.krow td.m,tr.krow td.pos{grid-column:1 / -1}
+  tr.krow td.pos{order:9}
+  .tabs button{padding:10px 10px}
+  tr.row td::before{content:attr(data-label);display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  tr.row td.m::before{display:none}
+  tr.row td.m{font-weight:500}
+  .big strong{font-size:44px}
+  .tools .count{margin-left:0;width:100%}
+  .src li{grid-template-columns:1fr}
+  .src li.l1{padding-left:32px}
 }
-@media (prefers-reduced-motion:no-preference){
-  .seg{transition:width .25s ease}
-}
+@media (prefers-reduced-motion:no-preference){ .seg,.fill{transition:width .25s ease} }
 </style>
 </head>
 <body>
 <main class="wrap">
 
-  <header>
-    <p class="kicker">Termes de référence</p>
-    <h1>Responsable administratif</h1>
-    <p class="lede">Chargé de la gestion administrative de l’entreprise. Les missions sont regroupées en six domaines, avec un rythme et un indicateur de suivi pour chacune.</p>
+  <header class="head">
+    <div>
+      <p class="kicker">Termes de référence</p>
+      <h1>Responsable administratif</h1>
+      <p class="lede">Chargé de la gestion administrative de l’entreprise. Les missions sont suivies par domaine, avec des indicateurs, des cibles et un statut pour chaque période.</p>
+    </div>
+    <button type="button" class="btn" id="reset" title="Remet les statuts à « À faire » et vide les valeurs réalisées. Les cibles sont conservées.">Nouvelle période</button>
   </header>
 
-  <section class="summary" aria-label="Synthèse">
-    <div class="panel progress">
-      <p class="label">Avancement global</p>
-      <div class="big"><strong id="pct">0</strong><span>% · <span id="pct-detail"></span></span></div>
-      <div class="bar" id="global-bar" role="img" aria-label="Avancement global"></div>
-      <p class="hint">Choisissez un statut pour chaque mission dans le tableau : cette synthèse se met à jour seule.</p>
-    </div>
-    <div class="tiles">
-      <div class="tile done"><b id="n-done">0</b><span>Terminées</span></div>
-      <div class="tile doing"><b id="n-doing">0</b><span>En cours</span></div>
-      <div class="tile blocked"><b id="n-blocked">0</b><span>Bloquées</span></div>
-      <div class="tile todo"><b id="n-todo">0</b><span>À faire</span></div>
-    </div>
-  </section>
+  <div class="banner" id="banner">
+    <p><strong>Chiffres d’exemple.</strong> Remplacez-les par vos données : elles restent sur cet appareil.</p>
+    <button type="button" class="btn" id="clear-ex">Effacer les exemples</button>
+  </div>
 
-  <section aria-labelledby="h-domaines">
-    <div class="section-head">
-      <h2 id="h-domaines">Six domaines</h2>
-      <p>Cliquez sur un domaine pour filtrer le tableau.</p>
-    </div>
-    <div class="cards" id="cards"></div>
-  </section>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tab-tableau-de-bord" aria-controls="view-tableau-de-bord" aria-selected="true" data-view="tableau-de-bord">Tableau de bord</button>
+    <button type="button" role="tab" id="tab-missions" aria-controls="view-missions" aria-selected="false" data-view="missions">Missions</button>
+    <button type="button" role="tab" id="tab-termes" aria-controls="view-termes" aria-selected="false" data-view="termes">Termes de référence</button>
+  </nav>
 
-  <section aria-labelledby="h-missions">
-    <div class="section-head">
-      <h2 id="h-missions">Détail des missions <span id="mission-count" style="font:400 14px var(--font-body);color:var(--muted)"></span></h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" class="btn" id="clear" hidden>Afficher tous les domaines</button>
-        <button type="button" class="btn" id="reset">Réinitialiser les statuts</button>
+  <!-- Vue 1 : tableau de bord -->
+  <section class="view" id="view-tableau-de-bord" role="tabpanel" aria-labelledby="tab-tableau-de-bord">
+    <div class="summary">
+      <div class="panel stat" id="stat-kpi"></div>
+      <div class="panel stat" id="stat-mis"></div>
+    </div>
+
+    <section class="panel" aria-labelledby="h-att">
+      <div class="section-head">
+        <h2 id="h-att">Points d’attention</h2>
+        <button type="button" class="btn" id="copy">Copier la synthèse</button>
       </div>
+      <ul class="att-list" id="att"></ul>
+      <p class="flash" id="flash" role="status"></p>
+      <textarea class="copybox" id="copybox" readonly hidden aria-label="Synthèse à copier"></textarea>
+    </section>
+
+    <section aria-labelledby="h-dom">
+      <div class="section-head">
+        <h2 id="h-dom">Six domaines</h2>
+        <p>Cliquez sur un domaine pour voir ses missions.</p>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section aria-labelledby="h-kpi">
+      <div class="section-head">
+        <h2 id="h-kpi">Indicateurs</h2>
+        <p>Saisissez la cible et le réalisé : l’état se calcule seul.</p>
+      </div>
+      <div class="tablewrap">
+        <table id="kpi-table">
+          <thead><tr>
+            <th scope="col" style="width:30%">Indicateur</th><th scope="col" style="width:15%">Cible</th><th scope="col" style="width:15%">Réalisé</th>
+            <th scope="col" style="width:9%">Écart</th><th scope="col" style="width:16%">Position</th><th scope="col" style="width:15%">État</th>
+          </tr></thead>
+        </table>
+      </div>
+      <p class="note" style="margin-top:10px">Atteint : la cible est respectée. À surveiller : moins de 10 % sous une cible à atteindre, ou un léger dépassement d’un plafond (marge propre à chaque indicateur). Hors cible : au-delà. Le trait noir de la colonne Position marque la cible.</p>
+    </section>
+  </section>
+
+  <!-- Vue 2 : missions -->
+  <section class="view" id="view-missions" role="tabpanel" aria-labelledby="tab-missions" hidden>
+    <div class="tools">
+      <label class="field" for="g-by">Grouper par
+        <select id="g-by"><option value="domaine">Domaine</option><option value="rythme">Rythme</option></select>
+      </label>
+      <label class="field" for="f-domain">Domaine
+        <select id="f-domain"><option value="all">Tous les domaines</option></select>
+      </label>
+      <label class="field" for="f-status">Statut
+        <select id="f-status"><option value="all">Tous les statuts</option></select>
+      </label>
+      <p class="count" id="m-count" role="status"></p>
     </div>
     <div class="tablewrap">
-      <table id="table">
-        <thead>
-          <tr><th scope="col" style="width:38%">Mission</th><th scope="col" style="width:14%">Rythme *</th><th scope="col" style="width:30%">Indicateur de suivi *</th><th scope="col" style="width:18%">Statut</th></tr>
-        </thead>
+      <table id="m-table">
+        <thead><tr>
+          <th scope="col" style="width:38%">Mission</th><th scope="col" style="width:15%">Rythme *</th>
+          <th scope="col" style="width:29%">Indicateur associé *</th><th scope="col" style="width:18%">Statut de la période</th>
+        </tr></thead>
       </table>
+      <p class="empty" id="m-empty" hidden>Aucune mission ne correspond à ces filtres.</p>
     </div>
+    <p class="note">* Rythmes et indicateurs proposés pour suivre chaque mission, à adapter. Seules les missions, ainsi que le rythme mensuel de la saisie et des tableaux de bord, viennent des termes de référence. Une mission récurrente n’est jamais « terminée » : « Fait » veut dire fait pour la période en cours.</p>
   </section>
 
-  <p class="note">* Rythmes et indicateurs proposés pour suivre chaque mission, à adapter. Seules les missions, ainsi que le rythme mensuel de la saisie et des tableaux de bord, viennent des termes de référence. Les statuts sont conservés sur cet appareil.</p>
+  <!-- Vue 3 : texte d'origine -->
+  <section class="view" id="view-termes" role="tabpanel" aria-labelledby="tab-termes" hidden>
+    <div>
+      <h2>Fonctions du responsable administratif</h2>
+      <p class="note" style="margin-top:6px">Texte du document d’origine, orthographe corrigée. L’étiquette à droite indique le domaine où chaque ligne est suivie dans le tableau de bord.</p>
+    </div>
+    <div class="tablewrap"><ul class="src" id="src"></ul></div>
+  </section>
+
 </main>
 
 <script>
-const STATES = [
-  { id: "todo", label: "À faire" },
-  { id: "doing", label: "En cours" },
-  { id: "done", label: "Terminée" },
-  { id: "blocked", label: "Bloquée" }
+const MSTATES = [
+  { id: "todo", label: "À faire" }, { id: "doing", label: "En cours" },
+  { id: "done", label: "Fait" }, { id: "blocked", label: "Bloquée" }
 ];
+const MCLASS = { done: "ok", doing: "info", blocked: "bad", todo: "none" };
+const KLABEL = { ok: "Atteint", watch: "À surveiller", bad: "Hors cible", none: "À renseigner" };
+const KGLYPH = { ok: "✓", watch: "!", bad: "✕", none: "–" };
+const RYTHMES = ["Quotidien", "Hebdomadaire", "Mensuel", "À chaque événement", "Continu"];
 
 const DOMAINS = [
-  { id: "gestion", name: "Gestion administrative", kpi: "Dossiers traités dans les délais", missions: [
-    { id: "g1", t: "Assurer la bonne gestion administrative de l’entreprise", f: "Continu", i: "Dossiers et courriers en retard (nombre)" },
-    { id: "g2", t: "Traiter les dossiers administratifs", d: "Prise de rendez-vous, rédaction du courrier, classement des dossiers, saisie de documents ou du budget", f: "Quotidien", i: "Dossiers traités dans les délais (%)" }
+  { id: "gestion", name: "Gestion administrative", missions: [
+    { id: "g1", t: "Assurer la bonne gestion administrative de l’entreprise", f: "Continu", r: "Continu", i: "Dossiers et courriers en retard (nombre)" },
+    { id: "g2", t: "Traiter les dossiers administratifs", x: "Prise de rendez-vous, rédaction du courrier, classement des dossiers, saisie de documents ou du budget", f: "Quotidien", r: "Quotidien", i: "Dossiers traités dans les délais (%)" }
   ]},
-  { id: "conventions", name: "Conventions, avenants et contrats", kpi: "Conventions saisies dans le suivi", missions: [
-    { id: "c1", t: "Assurer la bonne gestion des conventions, des avenants et des contrats", f: "Continu", i: "Documents échus sans suite (nombre)" },
-    { id: "c2", t: "Enregistrer et conserver les conventions, les avenants et les contrats", f: "À chaque signature", i: "Documents archivés sur documents signés (%)" },
-    { id: "c3", t: "Saisir les conventions pour leur suivi", f: "À chaque convention", i: "Conventions saisies dans le suivi (%)" }
+  { id: "conventions", name: "Conventions, avenants et contrats", missions: [
+    { id: "c1", t: "Assurer la bonne gestion des conventions, des avenants et des contrats", f: "Continu", r: "Continu", i: "Documents échus sans suite (nombre)" },
+    { id: "c2", t: "Enregistrer et conserver les conventions, les avenants et les contrats", f: "À chaque signature", r: "À chaque événement", i: "Documents archivés sur documents signés (%)" },
+    { id: "c3", t: "Saisir les conventions pour leur suivi", f: "À chaque convention", r: "À chaque événement", i: "Conventions saisies dans le suivi (%)" }
   ]},
-  { id: "partenaires", name: "Relations avec les partenaires", kpi: "Envois complets du premier coup", missions: [
-    { id: "p1", t: "Assurer les relations administratives avec les différents partenaires", f: "Continu", i: "Demandes sans réponse (nombre)" },
-    { id: "p2", t: "Recenser les documents à transmettre", d: "Protocole, émargements, conventions…", f: "Mensuel", i: "Documents recensés sur documents attendus (%)" },
-    { id: "p3", t: "Contrôler l’ensemble des pièces avant envoi", f: "Avant chaque envoi", i: "Envois complets du premier coup (%)" }
+  { id: "partenaires", name: "Relations avec les partenaires", missions: [
+    { id: "p1", t: "Assurer les relations administratives avec les différents partenaires", f: "Continu", r: "Continu", i: "Demandes sans réponse (nombre)" },
+    { id: "p2", t: "Recenser les documents à transmettre", x: "Protocole, émargements, conventions…", f: "Mensuel", r: "Mensuel", i: "Documents recensés sur documents attendus (%)" },
+    { id: "p3", t: "Contrôler l’ensemble des pièces avant envoi", f: "Avant chaque envoi", r: "À chaque événement", i: "Envois complets du premier coup (%)" }
   ]},
-  { id: "controle", name: "Contrôle et suivi financier", kpi: "Tableau de bord remis dans les délais", missions: [
-    { id: "k1", t: "Contrôler les différents documents administratifs", f: "Hebdomadaire", i: "Documents non conformes relevés (nombre)" },
-    { id: "k2", t: "Vérifier la saisie mensuelle", d: "Anomalies, cohérence des plannings", f: "Mensuel", i: "Anomalies relevées sur le mois (nombre)", src: true },
-    { id: "k3", t: "Classer les documents justificatifs", f: "Hebdomadaire", i: "Justificatifs classés (%)" },
-    { id: "k4", t: "Établir les tableaux de bord mensuels", d: "En lien avec le cadre intermédiaire financier", f: "Mensuel", i: "Tableau remis dans les délais (oui / non)", src: true },
-    { id: "k5", t: "Suivre les règlements", f: "Hebdomadaire", i: "Règlements en retard (nombre)" }
+  { id: "controle", name: "Contrôle et suivi financier", missions: [
+    { id: "k1", t: "Contrôler les différents documents administratifs", f: "Hebdomadaire", r: "Hebdomadaire", i: "Documents non conformes relevés (nombre)" },
+    { id: "k2", t: "Vérifier la saisie mensuelle", x: "Anomalies, cohérence des plannings", f: "Mensuel", r: "Mensuel", i: "Anomalies de saisie non corrigées (nombre)", src: true },
+    { id: "k3", t: "Classer les documents justificatifs", f: "Hebdomadaire", r: "Hebdomadaire", i: "Justificatifs classés (%)" },
+    { id: "k4", t: "Établir les tableaux de bord mensuels", x: "En lien avec le cadre intermédiaire financier", f: "Mensuel", r: "Mensuel", i: "Tableau remis dans les délais (oui / non)", src: true },
+    { id: "k5", t: "Suivre les règlements", f: "Hebdomadaire", r: "Hebdomadaire", i: "Règlements en retard (nombre)" }
   ]},
-  { id: "equipe", name: "Pilotage de l’équipe", kpi: "Objectifs de l’équipe atteints", missions: [
-    { id: "e1", t: "Piloter l’équipe administrative", f: "Hebdomadaire", i: "Objectifs de l’équipe atteints (%)" },
-    { id: "e2", t: "Veiller au bon fonctionnement de l’équipe", f: "Continu", i: "Points de blocage ouverts (nombre)" },
-    { id: "e3", t: "Coordonner le travail auprès de ses collaborateurs", f: "Quotidien", i: "Tâches réparties et suivies (%)" }
+  { id: "equipe", name: "Pilotage de l’équipe", missions: [
+    { id: "e1", t: "Piloter l’équipe administrative", f: "Hebdomadaire", r: "Hebdomadaire", i: "Objectifs de l’équipe atteints (%)" },
+    { id: "e2", t: "Veiller au bon fonctionnement de l’équipe", f: "Continu", r: "Continu", i: "Points de blocage ouverts (nombre)" },
+    { id: "e3", t: "Coordonner le travail auprès de ses collaborateurs", f: "Quotidien", r: "Quotidien", i: "Tâches réparties et suivies (%)" }
   ]},
-  { id: "direction", name: "Demandes de la Direction", kpi: "Demandes traitées dans les délais", missions: [
-    { id: "d1", t: "Accomplir toutes autres tâches confiées par le Directeur Général", f: "Sur demande", i: "Demandes traitées dans les délais (%)" }
+  { id: "direction", name: "Demandes de la Direction", missions: [
+    { id: "d1", t: "Accomplir toutes autres tâches confiées par le Directeur Général", f: "Sur demande", r: "À chaque événement", i: "Demandes traitées dans les délais (%)" }
   ]}
 ];
 
-const KEY = "tdb-responsable-administratif-v1";
-const validIds = STATES.map(s => s.id);
-let state = {};
-try {
-  const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
-  if (raw && typeof raw === "object") state = raw;
-} catch (e) { state = {}; }
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
-const get = id => (validIds.includes(state[id]) ? state[id] : "todo");
+// dir "up" : la cible est un minimum. dir "down" : la cible est un plafond, tol = marge « à surveiller ».
+const KPIS = [
+  { id: "ia", d: "gestion", name: "Dossiers traités dans les délais", unit: "%", dir: "up", target: 95, value: 92 },
+  { id: "ib", d: "gestion", name: "Courriers et dossiers en retard", unit: "", dir: "down", target: 2, tol: 3, value: 4 },
+  { id: "ic", d: "conventions", name: "Conventions saisies dans le suivi", unit: "%", dir: "up", target: 100, value: 100 },
+  { id: "id", d: "conventions", name: "Documents échus sans suite", unit: "", dir: "down", target: 0, tol: 1, value: 2 },
+  { id: "ie", d: "partenaires", name: "Envois complets du premier coup", unit: "%", dir: "up", target: 98, value: 96 },
+  { id: "if", d: "partenaires", name: "Demandes de partenaires sans réponse", unit: "", dir: "down", target: 0, tol: 2, value: 0 },
+  { id: "ig", d: "controle", name: "Anomalies de saisie non corrigées", unit: "", dir: "down", target: 0, tol: 2, value: 0 },
+  { id: "ih", d: "controle", name: "Justificatifs classés", unit: "%", dir: "up", target: 100, value: 97 },
+  { id: "ii", d: "controle", name: "Règlements en retard", unit: "", dir: "down", target: 0, tol: 2, value: 3 },
+  { id: "ij", d: "equipe", name: "Objectifs de l’équipe atteints", unit: "%", dir: "up", target: 90, value: 90 },
+  { id: "ik", d: "direction", name: "Demandes de la Direction traitées dans les délais", unit: "%", dir: "up", target: 100, value: 100 }
+];
 
-let filter = null;
+const EX_MISSIONS = { g1: "done", g2: "done", c1: "done", c2: "done", c3: "doing", p1: "done", p2: "doing", p3: "blocked",
+  k1: "done", k2: "doing", k3: "todo", k4: "todo", k5: "blocked", e1: "done", e2: "todo", e3: "done", d1: "doing" };
+
+// [niveau, texte du document, id de la mission suivie]
+const SOURCE = [
+  [0, "Assurer la bonne gestion administrative de l’entreprise", "g1"],
+  [0, "Assurer la bonne gestion des conventions, des avenants et des contrats", "c1"],
+  [1, "Enregistrer et conserver les conventions, les avenants et les contrats", "c2"],
+  [0, "Assurer les relations administratives avec les différents partenaires", "p1"],
+  [1, "Recenser les documents à transmettre (protocole, émargements, conventions, …)", "p2"],
+  [0, "Saisir les conventions pour leur suivi", "c3"],
+  [1, "Contrôler l’ensemble des pièces avant envoi", "p3"],
+  [1, "Contrôler les différents documents administratifs", "k1"],
+  [0, "Vérifier la saisie mensuelle (anomalie, cohérence des plannings)", "k2"],
+  [0, "Classer les documents justificatifs", "k3"],
+  [1, "Établir les tableaux de bord mensuels en lien avec le cadre intermédiaire financier", "k4"],
+  [0, "Suivre les règlements", "k5"],
+  [1, "Piloter l’équipe administrative", "e1"],
+  [1, "Veiller au bon fonctionnement de l’équipe", "e2"],
+  [1, "Coordonner le travail auprès de ses collaborateurs", "e3"],
+  [0, "Chargé de la gestion administrative", null],
+  [0, "Effectue le traitement administratif de dossiers (prise de rendez-vous, rédaction du courrier, classement des dossiers, saisie de documents ou du budget).", "g2"],
+  [0, "Accomplir toutes autres tâches qui lui seront confiées par le Directeur Général", "d1"]
+];
+
 const $ = id => document.getElementById(id);
+const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+const ALL = DOMAINS.flatMap(d => d.missions.map(m => Object.assign(m, { dom: d.id })));
+const domName = id => DOMAINS.find(d => d.id === id).name;
+const KMAP = Object.fromEntries(KPIS.map(k => [k.id, k]));
+const fmt = n => { n = Math.round(n * 100) / 100; return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ","); };
+const withUnit = (k, n) => fmt(n) + (k.unit === "%" ? " %" : "");
+const numOrNull = x => (typeof x === "number" && Number.isFinite(x) ? x : null);
 
-function counts(missions) {
-  const c = { todo: 0, doing: 0, done: 0, blocked: 0, total: missions.length };
-  missions.forEach(m => { c[get(m.id)]++; });
+/* ---------- État enregistré sur l'appareil ---------- */
+const KEY = "tdb-responsable-administratif-v2";
+function fresh(example) {
+  const kpis = {};
+  KPIS.forEach(k => { kpis[k.id] = { target: k.target, value: example ? k.value : null }; });
+  return { example, missions: example ? Object.assign({}, EX_MISSIONS) : {}, kpis };
+}
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY));
+    if (raw && typeof raw === "object" && raw.kpis && raw.missions) {
+      const s = fresh(false);
+      s.example = !!raw.example;
+      Object.keys(raw.missions).forEach(id => { if (MSTATES.some(x => x.id === raw.missions[id])) s.missions[id] = raw.missions[id]; });
+      KPIS.forEach(k => { const r = raw.kpis[k.id]; if (r) s.kpis[k.id] = { target: numOrNull(r.target), value: numOrNull(r.value) }; });
+      return s;
+    }
+  } catch (e) { /* stockage indisponible : on repart des exemples */ }
+  return fresh(true);
+}
+let state = load();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+const mstate = id => state.missions[id] || "todo";
+
+/* ---------- Calculs ---------- */
+function kstatus(k) {
+  const { target: t, value: v } = state.kpis[k.id];
+  if (t == null || v == null) return "none";
+  if (k.dir === "up") return v >= t ? "ok" : v >= t * 0.9 ? "watch" : "bad";
+  return v <= t ? "ok" : v <= t + (k.tol == null ? 1 : k.tol) ? "watch" : "bad";
+}
+function mcounts(list) {
+  const c = { done: 0, doing: 0, blocked: 0, todo: 0, total: list.length };
+  list.forEach(m => { c[mstate(m.id)]++; });
   return c;
 }
-function barHTML(c) {
-  const w = n => (c.total ? (n / c.total) * 100 : 0).toFixed(2);
-  return `<span class="seg done" style="width:${w(c.done)}%"></span><span class="seg doing" style="width:${w(c.doing)}%"></span><span class="seg blocked" style="width:${w(c.blocked)}%"></span>`;
+function kcounts(list) {
+  const c = { ok: 0, watch: 0, bad: 0, none: 0, total: list.length };
+  list.forEach(k => { c[kstatus(k)]++; });
+  return c;
 }
-const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+const kdetail = k => {
+  const { target: t, value: v } = state.kpis[k.id];
+  return `réalisé ${withUnit(k, v)}, cible ${k.dir === "up" ? "≥" : "≤"} ${withUnit(k, t)} · ${domName(k.d)}`;
+};
+function attentionItems() {
+  const items = [];
+  KPIS.filter(k => kstatus(k) === "bad").forEach(k => items.push({ s: "bad", tag: "Hors cible", t: k.name, sub: kdetail(k) }));
+  ALL.filter(m => mstate(m.id) === "blocked").forEach(m => items.push({ s: "bad", tag: "Bloquée", t: m.t, sub: domName(m.dom) }));
+  KPIS.filter(k => kstatus(k) === "watch").forEach(k => items.push({ s: "watch", tag: "À surveiller", t: k.name, sub: kdetail(k) }));
+  return items;
+}
 
+/* ---------- Synthèse ---------- */
+const segs = (parts, total) => parts.map(([cls, n]) => `<span class="seg c-${cls}" style="width:${total ? (n / total * 100).toFixed(2) : 0}%"></span>`).join("");
+function statPanel(el, label, big, rest, parts, legend, total, aria) {
+  el.innerHTML = `<p class="label">${label}</p>
+    <div class="big"><strong>${big}</strong><span>${rest}</span></div>
+    <div class="bar" role="img" aria-label="${aria}">${segs(parts, total)}</div>
+    <ul class="legend">${legend.map(([cls, txt, n]) => `<li><i class="dot c-${cls}"></i>${txt} <b>${n}</b></li>`).join("")}</ul>`;
+}
+function updateStats() {
+  const kc = kcounts(KPIS), mc = mcounts(ALL);
+  statPanel($("stat-kpi"), "Indicateurs", kc.ok, `sur ${kc.total} atteints`,
+    [["ok", kc.ok], ["watch", kc.watch], ["bad", kc.bad]],
+    [["ok", "Atteints", kc.ok], ["watch", "À surveiller", kc.watch], ["bad", "Hors cible", kc.bad], ["none", "À renseigner", kc.none]],
+    kc.total, `${kc.ok} atteints, ${kc.watch} à surveiller, ${kc.bad} hors cible, ${kc.none} à renseigner`);
+  statPanel($("stat-mis"), "Missions de la période", mc.done, `sur ${mc.total} faites`,
+    [["ok", mc.done], ["info", mc.doing], ["bad", mc.blocked]],
+    [["ok", "Faites", mc.done], ["info", "En cours", mc.doing], ["bad", "Bloquées", mc.blocked], ["none", "À faire", mc.todo]],
+    mc.total, `${mc.done} faites, ${mc.doing} en cours, ${mc.blocked} bloquées, ${mc.todo} à faire`);
+}
+function updateAttention() {
+  const items = attentionItems();
+  if (items.length) {
+    $("att").innerHTML = items.map(i => `<li class="att s-${i.s}"><span class="pill s-${i.s}">${i.tag}</span><span class="t"><b>${i.t}</b><span>${i.sub}</span></span></li>`).join("");
+  } else {
+    const filled = KPIS.some(k => kstatus(k) !== "none");
+    $("att").innerHTML = `<li class="att-empty">${filled ? "Rien à signaler : les indicateurs renseignés sont atteints et aucune mission n’est bloquée." : "Renseignez vos indicateurs pour voir ici ce qui demande votre attention."}</li>`;
+  }
+}
+
+/* ---------- Domaines ---------- */
 function buildCards() {
   $("cards").innerHTML = DOMAINS.map(d => `
-    <button type="button" class="card" id="card-${d.id}" data-domain="${d.id}" aria-pressed="false">
-      <span class="top"><h3>${d.name}</h3><span class="count"></span></span>
+    <button type="button" class="card" id="card-${d.id}" data-domain="${d.id}">
+      <span class="top"><span class="name">${d.name}</span><span class="count"></span></span>
       <span class="bar" role="img"></span>
-      <span class="kpi">Indicateur clé *<b>${d.kpi}</b></span>
+      <span class="kpis"><span>Indicateurs</span><span class="dots" role="img"></span></span>
     </button>`).join("");
 }
-
-function buildTable() {
-  const options = STATES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
-  const body = DOMAINS.map(d => `
-    <tbody data-domain="${d.id}">
-      <tr class="grp"><th colspan="4" scope="colgroup">${d.name}<span>${plural(d.missions.length, "mission", "missions")}</span></th></tr>
-      ${d.missions.map(m => `
-      <tr class="row" data-state="todo" data-id="${m.id}">
-        <td class="m" data-label="Mission">${m.t}${m.d ? `<small>${m.d}</small>` : ""}</td>
-        <td data-label="Rythme *"><span class="chip"${m.src ? ' title="Rythme précisé dans les termes de référence"' : ""}>${m.f}</span></td>
-        <td data-label="Indicateur de suivi *">${m.i}</td>
-        <td data-label="Statut"><select class="st" id="st-${m.id}" data-id="${m.id}" aria-label="Statut : ${m.t}">${options}</select></td>
-      </tr>`).join("")}
-    </tbody>`).join("");
-  $("table").insertAdjacentHTML("beforeend", body);
-  syncSelects();
+function updateCards() {
+  DOMAINS.forEach(d => {
+    const mc = mcounts(d.missions), card = $("card-" + d.id), ks = KPIS.filter(k => k.d === d.id), kc = kcounts(ks);
+    card.querySelector(".count").textContent = `${mc.done} sur ${mc.total} faites`;
+    const bar = card.querySelector(".bar");
+    bar.innerHTML = segs([["ok", mc.done], ["info", mc.doing], ["bad", mc.blocked]], mc.total);
+    bar.setAttribute("aria-label", `${mc.done} faites, ${mc.doing} en cours, ${mc.blocked} bloquées sur ${mc.total}`);
+    const dots = card.querySelector(".dots");
+    dots.innerHTML = ks.map(k => `<i class="dot c-${kstatus(k)}" title="${k.name} : ${KLABEL[kstatus(k)]}"></i>`).join("");
+    dots.setAttribute("aria-label", `${kc.ok} atteints, ${kc.watch} à surveiller, ${kc.bad} hors cible, ${kc.none} à renseigner`);
+  });
 }
 
-function syncSelects() {
-  document.querySelectorAll("tr.row").forEach(tr => {
-    const v = get(tr.dataset.id);
+/* ---------- Indicateurs ---------- */
+function buildKpiTable() {
+  const body = DOMAINS.map(d => {
+    const list = KPIS.filter(k => k.d === d.id);
+    return `<tbody><tr class="grp"><th colspan="6" scope="colgroup">${d.name}</th></tr>${list.map(k => {
+      const op = k.dir === "up" ? "≥" : "≤", u = k.unit === "%" ? "%" : "";
+      const st = state.kpis[k.id];
+      const input = (field, label) => `<label class="num"><span class="op">${field === "target" ? op : ""}</span><input type="number" inputmode="decimal" step="any" min="0" id="${field}-${k.id}" data-kpi="${k.id}" data-field="${field}" value="${st[field] == null ? "" : st[field]}" aria-label="${label} : ${k.name}"><span class="u">${u}</span></label>`;
+      return `<tr class="row krow" data-kpi="${k.id}" data-s="none">
+        <td class="m" data-label="Indicateur">${k.name}</td>
+        <td data-label="Cible">${input("target", "Cible")}</td>
+        <td data-label="Réalisé">${input("value", "Réalisé")}</td>
+        <td class="gap" data-label="Écart"></td>
+        <td class="pos" data-label="Position"></td>
+        <td class="state" data-label="État"></td>
+      </tr>`;
+    }).join("")}</tbody>`;
+  }).join("");
+  $("kpi-table").insertAdjacentHTML("beforeend", body);
+}
+function bulletHTML(k, s) {
+  const { target: t, value: v } = state.kpis[k.id];
+  const max = k.unit === "%" ? 100 : Math.max(5, (t == null ? 0 : t) + (k.tol == null ? 1 : k.tol) * 2, v == null ? 0 : v);
+  const pos = n => Math.max(0, Math.min(100, n / max * 100));
+  return `<div class="bullet" aria-hidden="true">${v != null ? `<i class="fill c-${s}" style="width:${pos(v)}%"></i>` : ""}${t != null ? `<i class="tick" style="left:calc(${pos(t)}% - 1px)"></i>` : ""}</div>`;
+}
+function gapText(k) {
+  const { target: t, value: v } = state.kpis[k.id];
+  if (t == null || v == null) return "—";
+  const d = Math.round((v - t) * 100) / 100;
+  if (d === 0) return "0";
+  return (d > 0 ? "+" : "−") + fmt(Math.abs(d)) + (k.unit === "%" ? " pts" : "");
+}
+function updateKpiRows() {
+  document.querySelectorAll("tr.krow").forEach(tr => {
+    const k = KMAP[tr.dataset.kpi], s = kstatus(k);
+    tr.dataset.s = s;
+    tr.querySelector(".gap").textContent = gapText(k);
+    tr.querySelector(".pos").innerHTML = bulletHTML(k, s);
+    tr.querySelector(".state").innerHTML = `<span class="pill s-${s}"><span aria-hidden="true">${KGLYPH[s]}</span>${KLABEL[s]}</span>`;
+  });
+}
+function syncKpiInputs() {
+  document.querySelectorAll("#kpi-table input[data-kpi]").forEach(inp => {
+    const v = state.kpis[inp.dataset.kpi][inp.dataset.field];
+    inp.value = v == null ? "" : v;
+  });
+}
+
+/* ---------- Missions ---------- */
+const OPTS = MSTATES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+function missionRow(m, by) {
+  const sub = [m.x, by === "rythme" ? domName(m.dom) : ""].filter(Boolean).map(s => `<small>${s}</small>`).join("");
+  return `<tr class="row" data-id="${m.id}" data-dom="${m.dom}" data-state="${mstate(m.id)}">
+    <td class="m" data-label="Mission">${m.t}${sub}</td>
+    <td data-label="Rythme *"><span class="chip"${m.src ? ' title="Rythme précisé dans les termes de référence"' : ""}>${m.f}</span></td>
+    <td data-label="Indicateur associé *">${m.i}</td>
+    <td data-label="Statut"><select class="st" id="st-${m.id}" data-id="${m.id}" aria-label="Statut : ${m.t}">${OPTS}</select></td>
+  </tr>`;
+}
+function renderMissions() {
+  const by = $("g-by").value;
+  const groups = by === "rythme"
+    ? RYTHMES.map(r => ({ name: r, items: ALL.filter(m => m.r === r) }))
+    : DOMAINS.map(d => ({ name: d.name, items: d.missions }));
+  const table = $("m-table");
+  table.querySelectorAll("tbody").forEach(t => t.remove());
+  table.insertAdjacentHTML("beforeend", groups.map(g => `<tbody><tr class="grp"><th colspan="4" scope="colgroup">${g.name}</th></tr>${g.items.map(m => missionRow(m, by)).join("")}</tbody>`).join(""));
+  table.querySelectorAll("select.st").forEach(s => { s.value = mstate(s.dataset.id); });
+  applyMissionFilter();
+}
+function applyMissionFilter() {
+  const dom = $("f-domain").value, st = $("f-status").value;
+  let shown = 0;
+  $("m-table").querySelectorAll("tbody").forEach(tb => {
+    let n = 0;
+    tb.querySelectorAll("tr.row").forEach(tr => {
+      const ok = (dom === "all" || tr.dataset.dom === dom) && (st === "all" || mstate(tr.dataset.id) === st);
+      tr.hidden = !ok;
+      if (ok) n++;
+    });
+    tb.hidden = n === 0;
+    shown += n;
+  });
+  $("m-count").textContent = plural(shown, "mission affichée", "missions affichées");
+  $("m-empty").hidden = shown !== 0;
+}
+function syncMissionRows() {
+  document.querySelectorAll("#m-table tr.row").forEach(tr => {
+    const v = mstate(tr.dataset.id);
     tr.dataset.state = v;
     tr.querySelector("select").value = v;
   });
 }
 
-function renderSummary() {
-  const all = DOMAINS.flatMap(d => d.missions);
-  const c = counts(all);
-  $("pct").textContent = c.total ? Math.round((c.done / c.total) * 100) : 0;
-  $("pct-detail").textContent = `${c.done} sur ${c.total} missions terminées`;
-  $("global-bar").innerHTML = barHTML(c);
-  $("global-bar").setAttribute("aria-label", `${c.done} missions terminées sur ${c.total}`);
-  ["done", "doing", "blocked", "todo"].forEach(k => { $("n-" + k).textContent = c[k]; });
-  DOMAINS.forEach(d => {
-    const dc = counts(d.missions);
-    const card = $("card-" + d.id);
-    card.querySelector(".count").textContent = `${dc.done} / ${dc.total} terminées`;
-    card.querySelector(".bar").innerHTML = barHTML(dc);
-    card.querySelector(".bar").setAttribute("aria-label", `${dc.done} terminées, ${dc.doing} en cours, ${dc.blocked} bloquées sur ${dc.total}`);
-  });
+/* ---------- Texte d'origine ---------- */
+function buildSource() {
+  $("src").innerHTML = SOURCE.map(([lvl, text, id]) => {
+    const tag = id ? domName(ALL.find(m => m.id === id).dom) : "Rôle du poste";
+    return `<li class="l${lvl}"><span>${text}</span><span class="tag">${tag}</span></li>`;
+  }).join("");
 }
 
-function applyFilter() {
-  let shown = 0;
-  document.querySelectorAll("tbody[data-domain]").forEach(tb => {
-    const show = !filter || tb.dataset.domain === filter;
-    tb.hidden = !show;
-    if (show) shown += tb.querySelectorAll("tr.row").length;
-  });
-  document.querySelectorAll(".card").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.domain === filter)));
-  $("clear").hidden = !filter;
-  $("mission-count").textContent = "· " + plural(shown, "mission", "missions");
+/* ---------- Mise à jour globale ---------- */
+function updateDashboard() {
+  updateKpiRows();
+  updateStats();
+  updateAttention();
+  updateCards();
+}
+function syncAll() {
+  syncKpiInputs();
+  syncMissionRows();
+  $("banner").hidden = !state.example;
+  updateDashboard();
+  applyMissionFilter();
+}
+function resetPeriod() {
+  state.example = false;
+  state.missions = {};
+  KPIS.forEach(k => { state.kpis[k.id].value = null; });
+  save();
+  syncAll();
 }
 
+/* ---------- Onglets ---------- */
+const VIEWS = ["tableau-de-bord", "missions", "termes"];
+let current = VIEWS[0];
+function showView(v) {
+  current = VIEWS.includes(v) ? v : VIEWS[0];
+  VIEWS.forEach(x => {
+    $("view-" + x).hidden = x !== current;
+    const t = $("tab-" + x);
+    t.setAttribute("aria-selected", String(x === current));
+    t.tabIndex = x === current ? 0 : -1;
+  });
+}
+function go(v) {
+  showView(v);
+  try { location.hash = current; } catch (e) {}
+}
+
+/* ---------- Synthèse à copier ---------- */
+function summaryText() {
+  const kc = kcounts(KPIS), mc = mcounts(ALL), items = attentionItems();
+  const lines = ["Tableau de bord — Responsable administratif"];
+  if (state.example) lines.push("(chiffres d’exemple)");
+  lines.push(`Indicateurs : ${kc.ok} sur ${kc.total} atteints, ${kc.watch} à surveiller, ${kc.bad} hors cible, ${kc.none} à renseigner`);
+  lines.push(`Missions : ${mc.done} sur ${mc.total} faites, ${mc.doing} en cours, ${mc.blocked} bloquées, ${mc.todo} à faire`);
+  if (items.length) { lines.push("", "À traiter :"); items.forEach(i => lines.push(`- ${i.tag} : ${i.t} (${i.sub})`)); }
+  return lines.join("\n");
+}
+let flashTimer = null;
+function flash(msg) {
+  $("flash").textContent = msg;
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { $("flash").textContent = ""; }, 4000);
+}
+
+/* ---------- Démarrage ---------- */
 buildCards();
-buildTable();
-renderSummary();
-applyFilter();
+buildKpiTable();
+buildSource();
+DOMAINS.forEach(d => $("f-domain").insertAdjacentHTML("beforeend", `<option value="${d.id}">${d.name}</option>`));
+MSTATES.forEach(s => $("f-status").insertAdjacentHTML("beforeend", `<option value="${s.id}">${s.label}</option>`));
+renderMissions();
+syncAll();
+showView(location.hash.slice(1));
+
+/* ---------- Événements ---------- */
+$("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-view]"); if (b) go(b.dataset.view); });
+$("tabs").addEventListener("keydown", e => {
+  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+  const next = VIEWS[(VIEWS.indexOf(current) + (e.key === "ArrowRight" ? 1 : -1) + VIEWS.length) % VIEWS.length];
+  go(next);
+  $("tab-" + next).focus();
+});
+window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
 
 $("cards").addEventListener("click", e => {
   const card = e.target.closest(".card");
   if (!card) return;
-  filter = filter === card.dataset.domain ? null : card.dataset.domain;
-  applyFilter();
-});
-$("clear").addEventListener("click", () => { filter = null; applyFilter(); });
-$("table").addEventListener("change", e => {
-  const s = e.target.closest("select.st");
-  if (!s) return;
-  state[s.dataset.id] = s.value;
-  s.closest("tr").dataset.state = s.value;
-  save();
-  renderSummary();
+  $("f-domain").value = card.dataset.domain;
+  $("f-status").value = "all";
+  applyMissionFilter();
+  go("missions");
+  $("tabs").scrollIntoView({ block: "start" });
 });
 
+$("g-by").addEventListener("change", renderMissions);
+$("f-domain").addEventListener("change", applyMissionFilter);
+$("f-status").addEventListener("change", applyMissionFilter);
+
+$("m-table").addEventListener("change", e => {
+  const s = e.target.closest("select.st");
+  if (!s) return;
+  state.missions[s.dataset.id] = s.value;
+  s.closest("tr").dataset.state = s.value;
+  save();
+  updateDashboard();
+});
+$("kpi-table").addEventListener("input", e => {
+  const inp = e.target.closest("input[data-kpi]");
+  if (!inp) return;
+  const v = inp.value === "" ? null : Number(inp.value);
+  state.kpis[inp.dataset.kpi][inp.dataset.field] = Number.isFinite(v) ? v : null;
+  save();
+  updateDashboard();
+});
+
+$("clear-ex").addEventListener("click", resetPeriod);
 let armed = null;
 $("reset").addEventListener("click", () => {
+  const b = $("reset");
   if (!armed) {
-    $("reset").textContent = "Cliquer pour confirmer";
-    armed = setTimeout(() => { armed = null; $("reset").textContent = "Réinitialiser les statuts"; }, 4000);
+    b.textContent = "Confirmer : tout remettre à zéro";
+    b.classList.add("armed");
+    armed = setTimeout(() => { armed = null; b.textContent = "Nouvelle période"; b.classList.remove("armed"); }, 4000);
     return;
   }
   clearTimeout(armed);
   armed = null;
-  state = {};
-  save();
-  syncSelects();
-  renderSummary();
-  $("reset").textContent = "Réinitialiser les statuts";
+  b.textContent = "Nouvelle période";
+  b.classList.remove("armed");
+  resetPeriod();
+});
+
+$("copy").addEventListener("click", async () => {
+  const text = summaryText();
+  try {
+    await navigator.clipboard.writeText(text);
+    $("copybox").hidden = true;
+    flash("Synthèse copiée.");
+  } catch (err) {
+    const box = $("copybox");
+    box.value = text;
+    box.hidden = false;
+    box.select();
+    flash("Copie refusée : sélectionnez le texte ci-dessous et copiez-le.");
+  }
 });
 </script>
 </body>
