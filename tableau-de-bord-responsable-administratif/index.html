@@ -153,10 +153,31 @@ tr[data-s="ok"]{--bar:var(--good)} tr[data-s="watch"]{--bar:var(--warn-fill)} tr
 .empty{padding:24px;text-align:center;color:var(--muted)}
 
 /* Texte d'origine */
-.src li{display:grid;grid-template-columns:1fr auto;align-items:start;gap:4px 16px;padding:11px 16px;border-top:1px solid var(--line)}
-.src li:first-child{border-top:0}
-.src li.l1{padding-left:44px}
+.src > li{border-top:1px solid var(--line)}
+.src > li:first-child{border-top:0}
+.src summary{position:relative;display:grid;grid-template-columns:1fr auto;align-items:start;gap:4px 16px;padding:11px 16px 11px 40px;cursor:pointer;list-style:none}
+.src summary::-webkit-details-marker{display:none}
+.src summary::before{content:"›";position:absolute;left:18px;top:8px;font-size:22px;line-height:1.4;color:var(--muted)}
+.src details[open] > summary{background:var(--accent-soft)}
+.src details[open] > summary::before{transform:rotate(90deg);transform-origin:40% 55%}
+.src summary:hover .stext{color:var(--accent)}
+.src > li.l1 summary{padding-left:64px}
+.src > li.l1 summary::before{left:42px}
 .src .tag{font-size:12.5px;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 10px;white-space:nowrap}
+.src details[open] .tag{background:var(--surface)}
+.xp{display:grid;gap:14px;padding:14px 16px 18px 40px;border-top:1px dashed var(--line)}
+.src > li.l1 .xp{padding-left:64px}
+.xb b,.xn b{display:block;margin-bottom:2px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.xb p,.xb ul{max-width:68ch}
+.xb ul{display:grid;gap:4px;padding-left:20px;list-style:disc}
+.xn{max-width:68ch;padding:10px 12px;border-radius:8px;border-left:4px solid var(--c);background:var(--cs);font-size:14px}
+.xn.lexique,.xn.diff{--c:var(--accent);--cs:var(--accent-soft)}
+.xn.confirm{--c:var(--warn-fill);--cs:var(--warn-soft)}
+.xn.conseil{--c:var(--good);--cs:var(--good-soft)}
+.lex{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px 24px;margin:14px 0 0}
+.lex dt{font-weight:600}
+.lex dd{margin:0;font-size:14px;color:var(--muted)}
+.clar{display:grid;gap:6px;margin:12px 0 0;padding-left:22px}
 
 @media (min-width:760px){ table{min-width:760px} }
 @media (max-width:820px){ .summary{grid-template-columns:1fr} }
@@ -176,8 +197,11 @@ tr[data-s="ok"]{--bar:var(--good)} tr[data-s="watch"]{--bar:var(--warn-fill)} tr
   .logo{width:64px;height:64px;border-radius:14px}
   .brand{gap:14px}
   .tools .count{margin-left:0;width:100%}
-  .src li{grid-template-columns:1fr}
-  .src li.l1{padding-left:32px}
+  .src summary{grid-template-columns:1fr;padding-left:36px}
+  .src > li.l1 summary{padding-left:52px}
+  .src > li.l1 summary::before{left:30px}
+  .xp{padding-left:36px}
+  .src > li.l1 .xp{padding-left:52px}
 }
 @media (prefers-reduced-motion:no-preference){ .seg,.fill{transition:width .25s ease} }
 </style>
@@ -278,11 +302,20 @@ tr[data-s="ok"]{--bar:var(--good)} tr[data-s="watch"]{--bar:var(--warn-fill)} tr
 
   <!-- Vue 3 : texte d'origine -->
   <section class="view" id="view-termes" role="tabpanel" aria-labelledby="tab-termes" hidden>
-    <div>
-      <h2>Fonctions du responsable administratif</h2>
-      <p class="note" style="margin-top:6px">Texte du document d’origine, orthographe corrigée. L’étiquette à droite indique le domaine où chaque ligne est suivie dans le tableau de bord.</p>
+    <div class="section-head" style="margin-bottom:0">
+      <div>
+        <h2>Fonctions du responsable administratif</h2>
+        <p class="note" style="margin-top:6px">Texte du document d’origine, orthographe corrigée. Cliquez sur une ligne pour lire son explication simple. L’étiquette à droite indique le domaine où la ligne est suivie dans le tableau de bord.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn" id="open-all">Tout déplier</button>
+        <button type="button" class="btn" id="close-all">Tout replier</button>
+      </div>
     </div>
+    <p class="note">Quand le texte dit « assurer », « veiller » ou « piloter », le responsable répond du résultat, même s’il ne fait pas tout lui-même. Quand il dit « saisir », « classer » ou « enregistrer », c’est une tâche qu’il fait lui-même.</p>
     <div class="tablewrap"><ul class="src" id="src"></ul></div>
+    <section class="panel" aria-labelledby="h-lex"><h2 id="h-lex">Petit lexique</h2><dl class="lex" id="lex"></dl></section>
+    <section class="panel" aria-labelledby="h-clar"><h2 id="h-clar">À clarifier avec le Directeur Général</h2><ol class="clar" id="clar"></ol></section>
   </section>
 
   <footer class="foot">Multimédia Glory Guinée SARLU · Tableau de bord du responsable administratif</footer>
@@ -348,27 +381,12 @@ const KPIS = [
 const EX_MISSIONS = { g1: "done", g2: "done", c1: "done", c2: "done", c3: "doing", p1: "done", p2: "doing", p3: "blocked",
   k1: "done", k2: "doing", k3: "todo", k4: "todo", k5: "blocked", e1: "done", e2: "todo", e3: "done", d1: "doing" };
 
-// [niveau, texte du document, id de la mission suivie]
-const SOURCE = [
-  [0, "Assurer la bonne gestion administrative de l’entreprise", "g1"],
-  [0, "Assurer la bonne gestion des conventions, des avenants et des contrats", "c1"],
-  [1, "Enregistrer et conserver les conventions, les avenants et les contrats", "c2"],
-  [0, "Assurer les relations administratives avec les différents partenaires", "p1"],
-  [1, "Recenser les documents à transmettre (protocole, émargements, conventions, …)", "p2"],
-  [0, "Saisir les conventions pour leur suivi", "c3"],
-  [1, "Contrôler l’ensemble des pièces avant envoi", "p3"],
-  [1, "Contrôler les différents documents administratifs", "k1"],
-  [0, "Vérifier la saisie mensuelle (anomalie, cohérence des plannings)", "k2"],
-  [0, "Classer les documents justificatifs", "k3"],
-  [1, "Établir les tableaux de bord mensuels en lien avec le cadre intermédiaire financier", "k4"],
-  [0, "Suivre les règlements", "k5"],
-  [1, "Piloter l’équipe administrative", "e1"],
-  [1, "Veiller au bon fonctionnement de l’équipe", "e2"],
-  [1, "Coordonner le travail auprès de ses collaborateurs", "e3"],
-  [0, "Chargé de la gestion administrative", null],
-  [0, "Effectue le traitement administratif de dossiers (prise de rendez-vous, rédaction du courrier, classement des dossiers, saisie de documents ou du budget).", "g2"],
-  [0, "Accomplir toutes autres tâches qui lui seront confiées par le Directeur Général", "d1"]
-];
+// Explications des termes de référence : ordre du document [niveau, clé], puis une fiche par clé
+const SOURCE = [[0, "g1"], [0, "c1"], [1, "c2"], [0, "p1"], [1, "p2"], [0, "c3"], [1, "p3"], [1, "k1"], [0, "k2"], [0, "k3"], [1, "k4"], [0, "k5"], [1, "e1"], [1, "e2"], [1, "e3"], [0, "role"], [0, "g2"], [0, "d1"]];
+const EXPL = {"role": {"t": "Chargé de la gestion administrative", "s": "C’est l’intitulé du rôle : cette personne tient l’administration de l’entreprise en ordre.", "c": ["Les dossiers, les courriers, les contrats et les rendez-vous passent par elle, ou sous son contrôle."], "b": "Personne ne cherche un document et aucune échéance n’est ratée.", "notes": []}, "g1": {"t": "Assurer la bonne gestion administrative de l’entreprise", "s": "Faire en sorte que l’administration fonctionne bien au quotidien : à jour, organisée, sans retard.", "c": ["Fixer des règles claires : qui fait quoi, où ranger, quels délais.", "Repérer ce qui traîne et le corriger."], "b": "Il y a peu de retards et on retrouve vite n’importe quel dossier.", "notes": []}, "g2": {"t": "Effectue le traitement administratif de dossiers (prise de rendez-vous, rédaction du courrier, classement des dossiers, saisie de documents ou du budget).", "s": "C’est le travail courant, avec cinq tâches précises.", "c": ["Prendre les rendez-vous et tenir l’agenda.", "Rédiger les courriers et les réponses officielles.", "Classer les dossiers, en papier et en numérique.", "Saisir les documents dans les fichiers de l’entreprise.", "Saisir le budget : entrer les montants prévus et dépensés."], "b": "Le courrier part à temps et le budget est à jour.", "notes": []}, "c1": {"t": "Assurer la bonne gestion des conventions, des avenants et des contrats", "s": "S’assurer qu’aucun accord n’est perdu, oublié ou expiré sans que personne ne s’en aperçoive.", "c": ["Tenir la liste de tous les accords : partenaire, dates de début et de fin, montant.", "Prévenir la direction avant chaque échéance.", "Préparer les renouvellements et les avenants."], "b": "Aucun document n’arrive à échéance sans qu’une décision ait été prise.", "notes": [{"k": "lexique", "t": "Convention : accord écrit avec un partenaire. Contrat : accord qui engage l’entreprise. Avenant : document qui modifie un accord existant."}]}, "c2": {"t": "Enregistrer et conserver les conventions, les avenants et les contrats", "s": "Garder une trace officielle et en sécurité de chaque accord.", "c": ["Enregistrer : noter l’accord dans un registre (numéro, date, partenaire).", "Conserver : archiver la version signée, en papier et en scan, bien rangée et sauvegardée."], "b": "On retrouve un contrat signé en quelques minutes.", "notes": []}, "c3": {"t": "Saisir les conventions pour leur suivi", "s": "Copier les informations clés de chaque convention dans le fichier ou le logiciel de suivi.", "c": ["Noter les dates, les montants et ce que chaque partie doit fournir.", "C’est ce qui permet de savoir à tout moment où en est chaque convention."], "b": "Toutes les conventions sont dans l’outil de suivi, avec des informations exactes.", "notes": [{"k": "diff", "t": "Différence avec « Enregistrer et conserver » : l’enregistrement sert à archiver, la saisie sert à suivre."}]}, "p1": {"t": "Assurer les relations administratives avec les différents partenaires", "s": "Être l’interlocuteur administratif des partenaires, pas celui qui négocie les accords.", "c": ["Répondre à leurs demandes et leur envoyer les documents.", "Relancer quand il manque quelque chose.", "Garder une trace des échanges."], "b": "Aucune demande de partenaire ne reste sans réponse.", "notes": []}, "p2": {"t": "Recenser les documents à transmettre (protocole, émargements, conventions, …)", "s": "Faire la liste de tout ce qu’il faut envoyer à chaque partenaire, et vérifier qu’on l’a bien.", "c": ["Comparer ce qui est attendu avec ce qui est reçu.", "Relancer les documents manquants."], "b": "La liste est complète et rien n’est oublié au moment d’envoyer.", "notes": [{"k": "lexique", "t": "Protocole : document qui fixe les règles de collaboration. Émargements : feuilles de présence signées par les personnes présentes à une séance, une formation ou une activité."}]}, "p3": {"t": "Contrôler l’ensemble des pièces avant envoi", "s": "C’est la dernière vérification avant de transmettre un dossier.", "c": ["Vérifier que tout est présent, signé et lisible.", "Vérifier que les noms, les dates et les montants sont justes.", "Une pièce manquante peut bloquer un paiement ou retarder un dossier."], "b": "Les dossiers sont acceptés du premier coup, sans demande de complément.", "notes": []}, "k1": {"t": "Contrôler les différents documents administratifs", "s": "Relire les documents pour s’assurer qu’ils sont corrects et conformes.", "c": ["Vérifier les signatures, les dates et les mentions obligatoires.", "Vérifier que les documents ne se contredisent pas entre eux."], "b": "Peu d’erreurs passent entre les mailles.", "notes": []}, "k2": {"t": "Vérifier la saisie mensuelle (anomalie, cohérence des plannings)", "s": "Chaque mois, relire ce qui a été saisi pour repérer les erreurs.", "c": ["Une anomalie est une erreur, un doublon, un oubli ou un montant qui paraît étrange.", "La cohérence des plannings veut dire que les horaires, les présences et les affectations correspondent à la réalité : une personne ne peut pas être à deux endroits à la fois.", "Cette saisie sert souvent à payer ou à facturer, d’où l’importance de la vérifier."], "b": "Les anomalies sont trouvées et corrigées avant la clôture du mois.", "notes": []}, "k3": {"t": "Classer les documents justificatifs", "s": "Ranger les preuves : factures, reçus, feuilles de présence, bons de commande.", "c": ["Adopter une méthode simple (par mois, par partenaire ou par type) et s’y tenir.", "Cela permet de justifier un chiffre en cas de question ou de contrôle."], "b": "Chaque chiffre important a sa preuve, facile à retrouver.", "notes": []}, "k4": {"t": "Établir les tableaux de bord mensuels en lien avec le cadre intermédiaire financier", "s": "Produire chaque mois une synthèse chiffrée de l’activité administrative. C’est ce que permet le tableau de bord du responsable administratif.", "c": ["Récupérer les chiffres auprès du responsable financier.", "Les mettre en forme et les comparer aux objectifs.", "Les présenter à la direction."], "b": "Le tableau est prêt à date fixe et la direction s’en sert pour décider.", "notes": [{"k": "confirm", "t": "« Cadre intermédiaire financier » désigne probablement le responsable financier de niveau intermédiaire. À confirmer avec le Directeur Général."}]}, "k5": {"t": "Suivre les règlements", "s": "Suivre les paiements.", "c": ["Vérifier ce qui a été payé et ce qui ne l’est pas encore.", "Repérer les retards, relancer ou alerter la direction."], "b": "Aucun retard de paiement ne passe inaperçu.", "notes": [{"k": "confirm", "t": "À préciser : cela concerne-t-il les paiements reçus des partenaires, ceux que l’entreprise doit payer, ou les deux ?"}]}, "e1": {"t": "Piloter l’équipe administrative", "s": "Diriger l’équipe.", "c": ["Fixer les objectifs et les priorités.", "Répartir le travail.", "Faire un point régulier et suivre les résultats."], "b": "L’équipe sait ce qu’on attend d’elle et atteint ses objectifs.", "notes": []}, "e2": {"t": "Veiller au bon fonctionnement de l’équipe", "s": "S’assurer que l’équipe peut travailler dans de bonnes conditions.", "c": ["Donner les outils et les consignes.", "Résoudre les blocages.", "Prévoir un remplacement en cas d’absence.", "Garder une bonne ambiance de travail."], "b": "Peu de blocages restent ouverts et le travail continue même en cas d’absence.", "notes": []}, "e3": {"t": "Coordonner le travail auprès de ses collaborateurs", "s": "Faire en sorte que chacun sache quoi faire, et quand.", "c": ["Transmettre les demandes de la direction.", "Éviter qu’une tâche soit faite deux fois ou oubliée.", "Faire circuler l’information."], "b": "Les tâches s’enchaînent sans doublon ni oubli.", "notes": []}, "d1": {"t": "Accomplir toutes autres tâches qui lui seront confiées par le Directeur Général", "s": "C’est une clause ouverte : le Directeur Général peut ajouter des tâches liées au poste.", "c": ["Noter chaque demande : date, contenu, échéance.", "Cela évite les oublis et permet de montrer ce qui a été fait."], "b": "Les demandes sont traitées dans les délais.", "notes": [{"k": "conseil", "t": "Pour une tâche importante ou inhabituelle, demandez une confirmation écrite. Cette clause couvre normalement des tâches cohérentes avec le poste ; les limites exactes dépendent du contrat de travail."}]}};
+const LEXIQUE = [["Convention", "Accord écrit avec un partenaire : qui fait quoi, pendant combien de temps, à quelles conditions."], ["Contrat", "Accord qui engage l’entreprise, avec un client, un fournisseur ou un salarié."], ["Avenant", "Document qui modifie un accord existant (durée, montant, date) sans tout refaire."], ["Protocole", "Document qui fixe les règles de collaboration avec un partenaire."], ["Émargement", "Feuille de présence signée par les personnes présentes à une séance, une formation ou une activité."], ["Justificatif", "Preuve d’une dépense ou d’une activité : facture, reçu, bon de commande, feuille de présence."], ["Anomalie", "Erreur, doublon, oubli ou montant qui paraît étrange dans une saisie."]];
+const CLARIFY = ["Qui est exactement le « cadre intermédiaire financier » (ligne « Établir les tableaux de bord mensuels ») ?", "Que recouvre « règlements » (ligne « Suivre les règlements ») : les encaissements, les paiements, ou les deux ?", "Quelles sont les limites de la dernière clause (« toutes autres tâches confiées par le Directeur Général ») ?"];
+const NOTE_LABEL = {"lexique": "Lexique", "confirm": "À confirmer", "conseil": "Conseil", "diff": "À ne pas confondre"};
 
 const $ = id => document.getElementById(id);
 const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
@@ -578,12 +596,25 @@ function syncMissionRows() {
   });
 }
 
-/* ---------- Texte d'origine ---------- */
+/* ---------- Texte d'origine et explications ---------- */
 function buildSource() {
-  $("src").innerHTML = SOURCE.map(([lvl, text, id]) => {
-    const tag = id ? domName(ALL.find(m => m.id === id).dom) : "Rôle du poste";
-    return `<li class="l${lvl}"><span>${text}</span><span class="tag">${tag}</span></li>`;
+  $("src").innerHTML = SOURCE.map(([lvl, key]) => {
+    const e = EXPL[key];
+    const tag = key === "role" ? "Rôle du poste" : domName(ALL.find(m => m.id === key).dom);
+    const notes = e.notes.map(n => `<div class="xn ${n.k}"><b>${NOTE_LABEL[n.k]}</b>${n.t}</div>`).join("");
+    return `<li class="l${lvl}"><details>
+      <summary><span class="stext">${e.t}</span><span class="tag">${tag}</span></summary>
+      <div class="xp">
+        <div class="xb"><b>En simple</b><p>${e.s}</p></div>
+        <div class="xb"><b>Concrètement</b><ul>${e.c.map(x => `<li>${x}</li>`).join("")}</ul></div>
+        <div class="xb"><b>C’est bien fait quand</b><p>${e.b}</p></div>
+        ${notes}
+      </div></details></li>`;
   }).join("");
+}
+function buildExtras() {
+  $("lex").innerHTML = LEXIQUE.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join("");
+  $("clar").innerHTML = CLARIFY.map(t => `<li>${t}</li>`).join("");
 }
 
 /* ---------- Mise à jour globale ---------- */
@@ -646,6 +677,7 @@ function flash(msg) {
 buildCards();
 buildKpiTable();
 buildSource();
+buildExtras();
 DOMAINS.forEach(d => $("f-domain").insertAdjacentHTML("beforeend", `<option value="${d.id}">${d.name}</option>`));
 MSTATES.forEach(s => $("f-status").insertAdjacentHTML("beforeend", `<option value="${s.id}">${s.label}</option>`));
 renderMissions();
@@ -692,6 +724,9 @@ $("kpi-table").addEventListener("input", e => {
   save();
   updateDashboard();
 });
+
+$("open-all").addEventListener("click", () => document.querySelectorAll("#src details").forEach(d => { d.open = true; }));
+$("close-all").addEventListener("click", () => document.querySelectorAll("#src details").forEach(d => { d.open = false; }));
 
 $("clear-ex").addEventListener("click", resetPeriod);
 let armed = null;
