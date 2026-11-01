@@ -1,0 +1,1 @@
+(self.NUR_Q=self.NUR_Q||{})[108]=[["إِنَّآ أَعۡطَيۡنَٰكَ ٱلۡكَوۡثَرَ","Nous t'avons certes, accordé l'Abondance","Inna aAAtaynaka alkawthara"],["فَصَلِّ لِرَبِّكَ وَٱنۡحَرۡ","Accomplis la Salât pour ton Seigneur et sacrifie","Fasalli lirabbika wainhar"],["إِنَّ شَانِئَكَ هُوَ ٱلۡأَبۡتَرُ","Celui qui te hait sera certes, sans postérité","Inna shaniaka huwa alabtaru"]];

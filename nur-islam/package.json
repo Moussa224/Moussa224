@@ -1,0 +1,26 @@
+{
+  "name": "nur-islam",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nûr — application islamique en 3D (horaires, Coran, qibla, tasbih, récits…)",
+  "type": "module",
+  "scripts": {
+    "data": "node scripts/build-data.mjs",
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "serve": "node scripts/serve.mjs",
+    "hadith": "node scripts/build-hadith.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "devDependencies": {
+    "@fontsource/amiri": "^5.3.0",
+    "@fontsource/amiri-quran": "^5.3.0",
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/outfit": "^5.3.0",
+    "@kazishariar/nawawi-40-hadith-data": "^1.0.3",
+    "adhan": "^4.4.6",
+    "esbuild": "^0.28.2",
+    "quran-json": "^3.1.2",
+    "three": "^0.187.0"
+  }
+}
