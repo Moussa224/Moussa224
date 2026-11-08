@@ -137,6 +137,7 @@ button { cursor: pointer; }
 .discret { color: var(--encre-2); font-size: .95rem; }
 .centre { text-align: center; }
 :focus-visible { outline: 3px solid var(--lapis); outline-offset: 2px; border-radius: 6px; }
+main:focus-visible { outline: none; } /* le focus est posé sur la zone principale à chaque changement d'écran, sans anneau */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }

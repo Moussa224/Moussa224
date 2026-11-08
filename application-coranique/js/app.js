@@ -70,9 +70,12 @@
     if (Etat.stockageIndisponible()) {
       Outils.message("Ton navigateur ne garde pas les données : ta progression sera perdue à la fermeture.", 6000);
     }
-    // Fonctionnement hors connexion (seulement quand l'application est ouverte depuis une adresse internet)
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+    // Fonctionnement hors connexion : seulement pour la version installable (celle qui déclare un manifeste),
+    // ouverte depuis une adresse internet. Ailleurs (fichier local, page intégrée), on s'en passe sans bruit.
+    if (Donnees.horsLignePossible()) {
+      window.addEventListener('load', () => {
+        try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* non autorisé ici */ }
+      });
     }
   };
 

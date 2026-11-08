@@ -14,7 +14,7 @@
     /* Applique le thème choisi avant l'affichage, pour éviter un éclair clair puis sombre. */
     try {
       var t = JSON.parse(localStorage.getItem('coran-facile-v1')).reglages.theme;
-      if (t === 'clair' || t === 'sombre') document.documentElement.setAttribute('data-theme', t === 'clair' ? 'light' : 'dark');
+      if (t === 'clair' || t === 'sombre') { document.documentElement.setAttribute('data-theme', t === 'clair' ? 'light' : 'dark'); document.documentElement.setAttribute('data-theme-app', ''); }
     } catch (e) { /* thème automatique */ }
   </script>
   <link rel="stylesheet" href="style.css">

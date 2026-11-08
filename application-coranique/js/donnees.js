@@ -82,7 +82,12 @@ const Donnees = (() => {
   };
 
   /* ---------- Mode hors-ligne : garder toutes les sourates dans le cache de l'appareil ---------- */
-  const horsLignePossible = () => 'caches' in window && location.protocol.startsWith('http');
+  const horsLignePossible = () => {
+    try {
+      return 'caches' in window && 'serviceWorker' in navigator && location.protocol.startsWith('http')
+        && !!document.querySelector('link[rel="manifest"]');
+    } catch (e) { return false; }
+  };
   const nbEnCache = async () => {
     if (!horsLignePossible()) return 0;
     try {

@@ -27,8 +27,13 @@ const Vues = (() => {
     rac.dataset.phonetique = r.phonetique ? '1' : '0';
     rac.dataset.traduction = r.traduction ? '1' : '0';
     rac.dataset.taille = String(r.taille);
-    if (r.theme === 'auto') rac.removeAttribute('data-theme');
-    else rac.setAttribute('data-theme', r.theme === 'clair' ? 'light' : 'dark');
+    // On ne retire l'attribut que si c'est nous qui l'avions posé : une page qui nous contient peut avoir imposé le sien
+    if (r.theme === 'auto') {
+      if (rac.hasAttribute('data-theme-app')) { rac.removeAttribute('data-theme'); rac.removeAttribute('data-theme-app'); }
+    } else {
+      rac.setAttribute('data-theme', r.theme === 'clair' ? 'light' : 'dark');
+      rac.setAttribute('data-theme-app', '');
+    }
   };
 
   const majPastille = () => {
@@ -990,7 +995,7 @@ const Vues = (() => {
         const etat = $('#etat-hors');
         const bouton = $('#bouton-hors');
         if (!Donnees.horsLignePossible()) {
-          etat.textContent = 'Ouvre l’application depuis son adresse internet pour pouvoir la télécharger. Si tu l’as ouverte depuis un fichier, tout le texte est déjà sur ton appareil.';
+          etat.textContent = 'Cette fonction est disponible quand l’application est ouverte depuis son adresse internet. Ouverte depuis un fichier sur l’ordinateur, tout le texte du Coran est déjà là.';
           bouton.hidden = true;
           return;
         }
