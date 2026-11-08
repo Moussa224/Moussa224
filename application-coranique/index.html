@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Coran Facile</title>
+  <meta name="description" content="Apprends le Coran pas à pas : lecture, audio verset par verset, mémorisation, alphabet arabe et tajwid.">
+  <meta name="theme-color" content="#F5F7FC" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0C1224" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icones/icone.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icones/icone-192.png">
+  <script>
+    /* Applique le thème choisi avant l'affichage, pour éviter un éclair clair puis sombre. */
+    try {
+      var t = JSON.parse(localStorage.getItem('coran-facile-v1')).reglages.theme;
+      if (t === 'clair' || t === 'sombre') document.documentElement.setAttribute('data-theme', t === 'clair' ? 'light' : 'dark');
+    } catch (e) { /* thème automatique */ }
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <noscript>
+    <p class="sans-js">Coran Facile a besoin de JavaScript. Merci de l'activer dans ton navigateur.</p>
+  </noscript>
+
+  <a class="lien-evitement" href="#contenu">Aller au contenu</a>
+
+  <div class="app">
+
+    <header class="haut" id="haut">
+      <a class="haut__retour" id="retour" href="#accueil" hidden aria-label="Retour"></a>
+      <p class="haut__titre" id="titre-page">Coran Facile</p>
+    </header>
+
+    <main id="contenu" tabindex="-1"></main>
+
+    <aside class="lecteur" id="lecteur" hidden aria-label="Lecteur audio">
+      <div class="lecteur__barre" aria-hidden="true"><div class="lecteur__progres" id="lecteur-progres"></div></div>
+      <div class="lecteur__corps">
+        <div class="lecteur__titre">
+          <strong id="lecteur-nom"></strong>
+          <span id="lecteur-detail"></span>
+        </div>
+        <div class="lecteur__boutons">
+          <button type="button" class="bouton-rond" data-action="prec" aria-label="Verset précédent"></button>
+          <button type="button" class="bouton-rond bouton-rond--plein" data-action="lecture" id="lecteur-lecture" aria-label="Lecture"></button>
+          <button type="button" class="bouton-rond" data-action="suiv" aria-label="Verset suivant"></button>
+          <button type="button" class="bouton-rond" data-action="options-lecteur" id="lecteur-options-bouton" aria-expanded="false" aria-controls="lecteur-options" aria-label="Réglages de l'audio"></button>
+          <button type="button" class="bouton-rond" data-action="fermer-lecteur" aria-label="Fermer le lecteur"></button>
+        </div>
+      </div>
+      <div class="lecteur__options" id="lecteur-options" hidden></div>
+    </aside>
+
+    <nav class="nav" id="nav" aria-label="Navigation principale">
+      <a href="#accueil" data-nav="accueil"><span data-icone="accueil"></span><span>Accueil</span></a>
+      <a href="#coran" data-nav="coran"><span data-icone="coran"></span><span>Coran</span></a>
+      <a href="#apprendre" data-nav="apprendre"><span data-icone="apprendre"></span><span>Apprendre</span></a>
+      <a href="#reviser" data-nav="reviser"><span data-icone="reviser"></span><span>Réviser</span><b class="pastille" id="pastille-reviser" hidden></b></a>
+      <a href="#reglages" data-nav="reglages"><span data-icone="reglages"></span><span>Réglages</span></a>
+    </nav>
+
+  </div>
+
+  <dialog class="dialogue" id="dialogue" aria-labelledby="dialogue-titre"></dialog>
+  <div class="message" id="message" role="status" aria-live="polite"></div>
+
+  <script src="data/sourates.js"></script>
+  <script src="js/contenu.js"></script>
+  <script src="js/outils.js"></script>
+  <script src="js/etat.js"></script>
+  <script src="js/donnees.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/vues.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

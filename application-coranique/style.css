@@ -1,0 +1,496 @@
+/* ==========================================================================
+   Coran Facile · mise en page
+   Idée : un cahier d'étude calme. Bleu lapis (couleur des manuscrits enluminés) pour guider,
+   or pour marquer les versets et la progression, papier bleuté très clair ou nuit bleue.
+   Texte arabe en Amiri Quran (conçue pour le Coran), interface en Atkinson Hyperlegible.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Amiri Quran';
+  src: url('polices/AmiriQuran-arabe.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200F, U+FB50-FDFF, U+FE70-FEFC;
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  src: url('polices/Atkinson-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  src: url('polices/Atkinson-400-italique.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  src: url('polices/Atkinson-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --fond: #F5F7FC;
+  --surface: #FFFFFF;
+  --surface-2: #ECF0F9;
+  --encre: #121C36;
+  --encre-2: #4A5675;
+  --trait: #D6DDEE;
+  --lapis: #2447AD;
+  --lapis-fort: #1A3484;
+  --lapis-doux: #E1E8FA;
+  --sur-lapis: #FFFFFF;
+  --or: #9A6508;
+  --or-doux: #F6E8C6;
+  --bon: #1B7248;
+  --bon-doux: #DCF1E5;
+  --alerte: #AE3C25;
+  --alerte-doux: #FBE3DD;
+  --ombre: 0 1px 2px rgb(18 28 54 / .06), 0 4px 14px rgb(18 28 54 / .06);
+
+  --police-ui: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --police-ar: 'Amiri Quran', 'Scheherazade New', 'Noto Naskh Arabic', 'Traditional Arabic', 'Geeza Pro', serif;
+  --taille-ar: 2.1rem;
+  --h-nav: 4.2rem;
+  --largeur: 46rem;
+  --rayon: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fond: #0C1224;
+    --surface: #151D36;
+    --surface-2: #1C2645;
+    --encre: #E8ECF8;
+    --encre-2: #A3AECB;
+    --trait: #28345A;
+    --lapis: #8FA6FF;
+    --lapis-fort: #B3C2FF;
+    --lapis-doux: #1F2C5A;
+    --sur-lapis: #0C1224;
+    --or: #E3B95A;
+    --or-doux: #3A3016;
+    --bon: #5FD39A;
+    --bon-doux: #15382B;
+    --alerte: #FF9A85;
+    --alerte-doux: #442019;
+    --ombre: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fond: #0C1224;
+  --surface: #151D36;
+  --surface-2: #1C2645;
+  --encre: #E8ECF8;
+  --encre-2: #A3AECB;
+  --trait: #28345A;
+  --lapis: #8FA6FF;
+  --lapis-fort: #B3C2FF;
+  --lapis-doux: #1F2C5A;
+  --sur-lapis: #0C1224;
+  --or: #E3B95A;
+  --or-doux: #3A3016;
+  --bon: #5FD39A;
+  --bon-doux: #15382B;
+  --alerte: #FF9A85;
+  --alerte-doux: #442019;
+  --ombre: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .3);
+  color-scheme: dark;
+}
+
+/* Taille du texte arabe, réglable (1 à 5) */
+:root[data-taille="1"] { --taille-ar: 1.6rem; }
+:root[data-taille="2"] { --taille-ar: 1.85rem; }
+:root[data-taille="3"] { --taille-ar: 2.1rem; }
+:root[data-taille="4"] { --taille-ar: 2.6rem; }
+:root[data-taille="5"] { --taille-ar: 3.1rem; }
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 4.5rem; }
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--encre);
+  font: 400 1.0625rem/1.55 var(--police-ui);
+  -webkit-tap-highlight-color: transparent;
+}
+[hidden] { display: none !important; }
+h1, h2, h3, p, ol, ul, figure { margin: 0; }
+h1, h2, h3 { line-height: 1.2; text-wrap: balance; }
+h1 { font-size: 1.7rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.05rem; }
+p { text-wrap: pretty; }
+a { color: var(--lapis); }
+ol, ul { padding: 0; list-style: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.ico { width: 1.4rem; height: 1.4rem; flex: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.discret { color: var(--encre-2); font-size: .95rem; }
+.centre { text-align: center; }
+:focus-visible { outline: 3px solid var(--lapis); outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Texte arabe : jamais d'espacement entre les lettres, il casserait la liaison des lettres */
+.ar, [lang="ar"] { font-family: var(--police-ar); letter-spacing: 0; text-transform: none; }
+.ar { font-size: var(--taille-ar); line-height: 2.15; word-spacing: .12em; direction: rtl; text-align: right; }
+.ar-petit { font-family: var(--police-ar); font-size: 1.5rem; line-height: 1.9; }
+
+.lien-evitement { position: absolute; left: .5rem; top: -4rem; z-index: 100; background: var(--lapis); color: var(--sur-lapis); padding: .6rem 1rem; border-radius: 8px; }
+.lien-evitement:focus { top: .5rem; }
+.sans-js { padding: 2rem; text-align: center; }
+
+/* ---------- Structure ---------- */
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+.haut {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: .5rem;
+  min-height: 3.4rem;
+  padding: .4rem max(1rem, env(safe-area-inset-right)) .4rem max(1rem, env(safe-area-inset-left));
+  padding-top: calc(.4rem + env(safe-area-inset-top, 0px));
+  background: var(--fond);
+  border-bottom: 1px solid var(--trait);
+}
+.haut__titre { font-weight: 700; font-size: 1.05rem; }
+.haut__retour { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; margin-left: -.5rem; color: var(--encre); border-radius: 50%; }
+.haut__retour:hover { background: var(--surface-2); }
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--largeur);
+  margin-inline: auto;
+  padding: 1.25rem max(1rem, env(safe-area-inset-right)) calc(var(--h-nav) + 2.5rem + env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left));
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+body.avec-lecteur main { padding-bottom: calc(var(--h-nav) + 7.5rem + env(safe-area-inset-bottom, 0px)); }
+.chargement { text-align: center; color: var(--encre-2); padding: 3rem 0; }
+
+/* ---------- Navigation ---------- */
+.nav {
+  position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: var(--surface);
+  border-top: 1px solid var(--trait);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.nav a {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem;
+  min-height: var(--h-nav);
+  color: var(--encre-2); text-decoration: none; font-size: .78rem; font-weight: 700;
+}
+.nav a[aria-current="page"] { color: var(--lapis); }
+.nav a[aria-current="page"]::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--lapis); }
+.pastille {
+  position: absolute; top: .5rem; left: calc(50% + .45rem);
+  min-width: 1.15rem; height: 1.15rem; padding: 0 .3rem; border-radius: 999px;
+  background: var(--or); color: var(--fond); font-size: .72rem; line-height: 1.15rem; text-align: center;
+}
+
+/* ---------- Lecteur audio ---------- */
+.lecteur {
+  position: fixed; z-index: 25; left: 0; right: 0;
+  bottom: calc(var(--h-nav) + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border-top: 1px solid var(--trait);
+  box-shadow: 0 -6px 18px rgb(18 28 54 / .1);
+}
+.lecteur__barre { height: 3px; background: var(--trait); }
+.lecteur__progres { height: 100%; width: 0; background: var(--or); }
+.lecteur__corps { display: flex; align-items: center; gap: .5rem; padding: .5rem max(.75rem, env(safe-area-inset-right)) .5rem max(.75rem, env(safe-area-inset-left)); max-width: var(--largeur); margin-inline: auto; }
+.lecteur__titre { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.lecteur__titre strong, .lecteur__titre span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lecteur__titre span { color: var(--encre-2); font-size: .88rem; }
+.lecteur__boutons { display: flex; align-items: center; gap: .15rem; }
+.lecteur__options { max-height: 52dvh; overflow-y: auto; max-width: var(--largeur); margin-inline: auto; padding: .25rem max(1rem, env(safe-area-inset-left)) 1rem; display: grid; gap: .9rem; border-top: 1px solid var(--trait); }
+.lecteur__options label, .lecteur__options .libelle { font-weight: 700; font-size: .92rem; display: block; margin-bottom: .3rem; }
+.bouton-rond {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.6rem; height: 2.6rem; border: 0; border-radius: 50%;
+  background: transparent; color: var(--encre);
+}
+.bouton-rond:hover { background: var(--surface-2); }
+.bouton-rond--plein { width: 3rem; height: 3rem; background: var(--lapis); color: var(--sur-lapis); }
+.bouton-rond--plein:hover { background: var(--lapis-fort); }
+.bouton-rond[aria-expanded="true"] { background: var(--lapis-doux); color: var(--lapis); }
+
+/* ---------- Boutons, puces, cartes ---------- */
+.bouton {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 2.9rem; padding: .55rem 1.2rem;
+  border: 2px solid var(--lapis); border-radius: 999px;
+  background: var(--lapis); color: var(--sur-lapis);
+  font-weight: 700; text-decoration: none; text-align: center;
+}
+.bouton:hover { background: var(--lapis-fort); border-color: var(--lapis-fort); }
+.bouton--second { background: transparent; color: var(--lapis); }
+.bouton--second:hover { background: var(--lapis-doux); border-color: var(--lapis); }
+.bouton--bon { background: var(--bon); border-color: var(--bon); color: var(--fond); }
+.bouton--alerte { background: transparent; border-color: var(--alerte); color: var(--alerte); }
+.bouton--alerte:hover { background: var(--alerte-doux); border-color: var(--alerte); }
+.bouton, .option { scroll-margin-bottom: calc(var(--h-nav) + 7rem); }
+.bouton[disabled] { opacity: .5; cursor: not-allowed; }
+.bouton--large { width: 100%; }
+.rangee { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.pile { display: grid; gap: 1rem; }
+.pile > *, .atelier > *, .groupe__corps > * { min-width: 0; }
+
+.puces { display: flex; flex-wrap: wrap; gap: .5rem; }
+.puce {
+  display: inline-flex; align-items: center; gap: .4rem;
+  min-height: 2.5rem; padding: .3rem .9rem;
+  border: 1.5px solid var(--trait); border-radius: 999px;
+  background: var(--surface); color: var(--encre); font-weight: 700; font-size: .95rem;
+}
+.puce[aria-pressed="true"], .puce[aria-checked="true"] { background: var(--lapis-doux); border-color: var(--lapis); color: var(--lapis); }
+
+.carte { background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); padding: 1.1rem; display: grid; gap: .8rem; box-shadow: var(--ombre); }
+.carte--accent { background: var(--lapis); border-color: var(--lapis); color: var(--sur-lapis); }
+.carte--accent .discret { color: inherit; opacity: .85; }
+.carte--accent .bouton { background: var(--sur-lapis); color: var(--lapis); border-color: var(--sur-lapis); }
+.carte--accent .bouton:hover { background: var(--lapis-doux); }
+.carte__etiquette { font-size: .82rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--or); }
+.carte--accent .carte__etiquette { color: inherit; opacity: .85; }
+.etiquette { display: inline-block; padding: .1rem .55rem; border-radius: 999px; background: var(--surface-2); color: var(--encre-2); font-size: .82rem; font-weight: 700; }
+.etiquette--bon { background: var(--bon-doux); color: var(--bon); }
+.etiquette--or { background: var(--or-doux); color: var(--or); }
+
+.barre { height: .5rem; border-radius: 999px; background: var(--trait); overflow: hidden; }
+.barre > i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--or); }
+.carte--accent .barre { background: rgb(255 255 255 / .28); }
+.carte--accent .barre > i { background: var(--or-doux); }
+
+.vide { text-align: center; color: var(--encre-2); padding: 2rem 1rem; display: grid; gap: .8rem; justify-items: center; }
+.erreur { background: var(--alerte-doux); color: var(--alerte); border-radius: var(--rayon); padding: 1rem; display: grid; gap: .7rem; justify-items: start; }
+
+/* Médaillon : étoile à huit pointes (rub el-hizb), faite de deux carrés */
+.medaillon { position: relative; isolation: isolate; flex: none; width: 2.9rem; height: 2.9rem; display: grid; place-items: center; font-weight: 700; font-size: .95rem; color: var(--encre); font-variant-numeric: tabular-nums; }
+.medaillon::before, .medaillon::after { content: ''; position: absolute; z-index: -1; inset: .45rem; border: 1.6px solid var(--or); border-radius: 3px; }
+.medaillon::after { transform: rotate(45deg); }
+.medaillon--petit { width: 2.3rem; height: 2.3rem; font-size: .82rem; }
+.medaillon--petit::before, .medaillon--petit::after { inset: .35rem; }
+.medaillon--plein::before, .medaillon--plein::after { background: var(--or-doux); }
+
+/* ---------- Accueil ---------- */
+.salut { color: var(--or); font-weight: 700; }
+.accueil-tete { display: grid; gap: .3rem; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.stat { background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); padding: .8rem .6rem; text-align: center; text-decoration: none; color: inherit; display: grid; gap: .1rem; }
+.stat__valeur { font-size: 1.6rem; font-weight: 700; color: var(--lapis); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat__nom { font-size: .85rem; color: var(--encre-2); }
+.lien-carte { display: flex; align-items: center; gap: .9rem; padding: 1rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); text-decoration: none; color: inherit; }
+.lien-carte:hover { border-color: var(--lapis); }
+.lien-carte > div { flex: 1; min-width: 0; }
+.lien-carte strong { display: block; }
+.verset-du-jour .ar { font-size: calc(var(--taille-ar) * .95); }
+.verset-du-jour blockquote { margin: 0; }
+
+/* ---------- Liste des sourates ---------- */
+.recherche { width: 100%; min-height: 3rem; padding: .6rem 1rem; border: 2px solid var(--trait); border-radius: 999px; background: var(--surface); }
+.recherche:focus { border-color: var(--lapis); outline: none; }
+.liste-sourates { display: grid; gap: .5rem; }
+.sourate-ligne { display: flex; align-items: center; gap: .9rem; padding: .7rem .9rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); text-decoration: none; color: inherit; }
+.sourate-ligne:hover { border-color: var(--lapis); }
+.sourate-ligne__corps { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.sourate-ligne__corps strong { font-size: 1.05rem; }
+.sourate-ligne__corps .barre { margin-top: .3rem; height: .3rem; }
+.sourate-ligne__ar { font-family: var(--police-ar); font-size: 1.6rem; line-height: 1.6; color: var(--lapis); white-space: nowrap; }
+.resultat-verset { display: grid; gap: .5rem; padding: .9rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); text-decoration: none; color: inherit; }
+.resultat-verset:hover { border-color: var(--lapis); }
+.resultat-verset .ar { font-size: 1.5rem; line-height: 2; }
+.resultat-verset__ref { font-weight: 700; color: var(--or); font-size: .92rem; }
+
+/* ---------- Lecture d'une sourate ---------- */
+.sourate-tete { display: grid; gap: .5rem; justify-items: center; text-align: center; padding: 1rem 0 .5rem; }
+.sourate-tete__ar { font-family: var(--police-ar); font-size: 3rem; line-height: 1.6; color: var(--lapis); font-weight: 400; }
+.sourate-tete__nom { font-size: 1.25rem; }
+.sourate-tete .rangee { justify-content: center; }
+.reglages-lecture { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .6rem 0; border-block: 1px solid var(--trait); }
+.reglages-lecture__taille { display: inline-flex; align-items: center; gap: .15rem; margin-left: auto; }
+.aller-verset { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.aller-verset input { width: 5rem; min-height: 2.5rem; padding: .3rem .6rem; border: 2px solid var(--trait); border-radius: 10px; background: var(--surface); }
+.bismillah { display: block; width: 100%; background: none; border: 0; padding: .5rem 0; text-align: center; color: var(--encre); }
+.bismillah .ar { text-align: center; font-size: calc(var(--taille-ar) * 1.1); }
+.versets { display: grid; }
+.verset { padding: 1rem .25rem 1.1rem; border-bottom: 1px solid var(--trait); display: grid; gap: .5rem; scroll-margin-top: 4.5rem; }
+.verset.est-lu { background: var(--lapis-doux); border-radius: var(--rayon); padding-inline: .75rem; border-bottom-color: transparent; }
+.verset__haut { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.verset__actions { display: flex; gap: .15rem; }
+.icone-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; border: 0; border-radius: 50%; background: transparent; color: var(--encre-2); }
+.icone-btn:hover { background: var(--surface-2); color: var(--lapis); }
+.icone-btn[aria-pressed="true"] { color: var(--or); }
+.icone-btn[aria-pressed="true"] svg path { fill: currentColor; }
+.icone-btn[data-action="appris"][aria-pressed="true"] { color: var(--bon); background: var(--bon-doux); }
+.icone-btn[data-action="appris"][aria-pressed="true"] svg path { fill: none; }
+.ph { font-style: italic; color: var(--lapis); line-height: 1.5; }
+.fr { color: var(--encre); line-height: 1.55; }
+:root[data-phonetique="0"] .ph { display: none; }
+:root[data-traduction="0"] .fr { display: none; }
+.sourate-nav { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: .5rem; }
+
+/* ---------- Mémoriser ---------- */
+.plage { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
+.plage label { display: inline-flex; align-items: center; gap: .4rem; font-weight: 700; }
+select { min-height: 2.6rem; padding: .3rem 2rem .3rem .7rem; border: 2px solid var(--trait); border-radius: 10px; background: var(--surface); max-width: 100%; }
+select:focus { border-color: var(--lapis); outline: none; }
+.onglets { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; padding: .3rem; background: var(--surface-2); border-radius: 999px; }
+.onglets button { min-height: 2.6rem; border: 0; border-radius: 999px; background: transparent; font-weight: 700; color: var(--encre-2); }
+.onglets button[aria-selected="true"] { background: var(--surface); color: var(--lapis); box-shadow: var(--ombre); }
+.niveau { display: grid; gap: .4rem; }
+.niveau input[type="range"] { width: 100%; accent-color: var(--lapis); height: 2rem; }
+.etude-versets { display: grid; gap: 1rem; }
+.etude-verset { display: grid; gap: .4rem; padding: 1rem .9rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); }
+.mot.cache { color: transparent; -webkit-text-fill-color: transparent; background: var(--lapis-doux); border-radius: 8px; cursor: pointer; user-select: none; box-shadow: 0 0 0 .08em var(--lapis-doux); }
+.mot.cache:hover { background: var(--trait); }
+.mot[role="button"] { cursor: pointer; }
+.quiz-compteur { color: var(--encre-2); font-weight: 700; }
+.quiz-trou { display: inline-block; min-width: 3.5rem; border-bottom: 3px solid var(--or); text-align: center; color: transparent; border-radius: 4px; }
+.quiz-trou.rempli { color: var(--bon); border-bottom-color: var(--bon); }
+.options { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.option { min-height: 4rem; padding: .4rem .6rem; border: 2px solid var(--trait); border-radius: var(--rayon); background: var(--surface); font-family: var(--police-ar); font-size: 1.7rem; line-height: 1.8; }
+.option:hover:not([disabled]) { border-color: var(--lapis); }
+.option.juste { border-color: var(--bon); background: var(--bon-doux); color: var(--bon); }
+.option.faux { border-color: var(--alerte); background: var(--alerte-doux); color: var(--alerte); }
+.option--nom { font-family: var(--police-ui); font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
+.libelle { display: block; }
+.retour-quiz { padding: .8rem 1rem; border-radius: var(--rayon); font-weight: 700; }
+.retour-quiz.juste { background: var(--bon-doux); color: var(--bon); }
+.retour-quiz.faux { background: var(--alerte-doux); color: var(--alerte); }
+.score { font-size: 2.6rem; font-weight: 700; color: var(--lapis); text-align: center; line-height: 1.1; }
+
+/* ---------- Réviser ---------- */
+.carte-revision { text-align: center; padding: 1.4rem 1.1rem; }
+.carte-revision .ar { text-align: center; }
+.carte-revision__ref { color: var(--or); font-weight: 700; }
+.carte-revision__fr { font-size: 1.25rem; line-height: 1.5; }
+.choix-note { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+
+/* ---------- Apprendre ---------- */
+.parcours { display: grid; gap: .5rem; counter-reset: etape; }
+.etape { display: flex; align-items: center; gap: .9rem; padding: .8rem .9rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); }
+.etape__marque { flex: none; width: 2.2rem; height: 2.2rem; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--trait); color: var(--encre-2); font-weight: 700; font-size: .9rem; }
+.etape--fait .etape__marque { background: var(--bon); border-color: var(--bon); color: var(--fond); }
+.etape--courante { border-color: var(--lapis); box-shadow: 0 0 0 2px var(--lapis-doux); }
+.etape--courante .etape__marque { border-color: var(--lapis); color: var(--lapis); }
+.etape__corps { flex: 1; min-width: 0; display: grid; gap: .1rem; }
+.etape__corps a { color: inherit; font-weight: 700; text-decoration: none; }
+.etape__corps a:hover { color: var(--lapis); text-decoration: underline; }
+.etape--fait .etape__corps a { color: var(--encre-2); }
+.note-enseignant { padding: .9rem 1rem; border-radius: var(--rayon); background: var(--or-doux); color: var(--encre); font-size: .95rem; }
+
+/* ---------- Alphabet ---------- */
+.grille-lettres { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; }
+.lettre { display: grid; justify-items: center; gap: .1rem; padding: .5rem .2rem .6rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); }
+.lettre:hover { border-color: var(--lapis); }
+.lettre__glyphe { font-family: var(--police-ar); font-size: 2.6rem; line-height: 1.7; color: var(--lapis); }
+.lettre__nom { font-size: .88rem; font-weight: 700; }
+.lettre--fait { background: var(--bon-doux); border-color: transparent; }
+.lettre-detail { display: grid; gap: .9rem; justify-items: center; text-align: center; }
+.lettre-detail__glyphe { font-family: var(--police-ar); font-size: 6rem; line-height: 1.5; color: var(--lapis); }
+.formes { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; width: 100%; }
+.forme { display: grid; justify-items: center; background: var(--surface-2); border-radius: 12px; padding: .3rem .2rem; }
+.forme span { font-family: var(--police-ar); font-size: 2.2rem; line-height: 1.7; }
+.forme small { font-size: .78rem; color: var(--encre-2); }
+.lettre-detail__nav { display: flex; justify-content: space-between; width: 100%; gap: .5rem; }
+
+/* ---------- Voyelles ---------- */
+.signes { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.signe-carte { display: grid; gap: .3rem; padding: .9rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); }
+.signe-carte__haut { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.signe-carte .ar-petit { font-size: 2.2rem; color: var(--lapis); }
+.atelier { display: grid; gap: .9rem; }
+.atelier__resultat { display: grid; justify-items: center; padding: 1rem; background: var(--lapis-doux); border-radius: var(--rayon); }
+.atelier__resultat .ar-petit { font-size: 5rem; line-height: 1.5; color: var(--lapis); }
+.atelier__lecture { font-size: 1.6rem; font-weight: 700; }
+.grille-choix { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.2rem, 1fr)); gap: .4rem; }
+.grille-choix button { min-height: 3rem; border: 1.5px solid var(--trait); border-radius: 10px; background: var(--surface); font-family: var(--police-ar); font-size: 1.7rem; line-height: 1.5; }
+.grille-choix button[aria-pressed="true"] { background: var(--lapis); border-color: var(--lapis); color: var(--sur-lapis); }
+.grille-choix--signes { grid-template-columns: repeat(auto-fit, minmax(7.2rem, 1fr)); }
+.grille-choix--signes button { font-size: 1.1rem; font-family: var(--police-ui); font-weight: 700; display: grid; justify-items: center; padding: .3rem; }
+.grille-choix--signes .ar-petit { font-size: 1.9rem; line-height: 1.3; }
+
+/* ---------- Tajwid ---------- */
+.groupe { border: 1px solid var(--trait); border-radius: var(--rayon); background: var(--surface); overflow: hidden; }
+.groupe > summary { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: 1rem; font-weight: 700; font-size: 1.1rem; cursor: pointer; list-style: none; }
+.groupe > summary::-webkit-details-marker { display: none; }
+.groupe > summary::after { content: ''; width: .6rem; height: .6rem; border-right: 2.5px solid var(--encre-2); border-bottom: 2.5px solid var(--encre-2); transform: rotate(45deg); transition: transform .15s; }
+.groupe[open] > summary::after { transform: rotate(-135deg); }
+.groupe__corps { display: grid; gap: 1rem; padding: 0 1rem 1rem; }
+.regle { display: grid; gap: .6rem; padding-top: 1rem; border-top: 1px solid var(--trait); }
+.regle h3 { color: var(--lapis); }
+.ar-en-ligne { font-family: var(--police-ar); font-size: 1.35em; line-height: 1; color: var(--lapis); white-space: nowrap; }
+.exemple { display: grid; gap: .3rem; padding: .7rem .8rem; background: var(--surface-2); border-radius: 12px; }
+.exemple .ar { font-size: 1.7rem; line-height: 2; }
+.exemple .ar mark { background: var(--or-doux); color: inherit; border-radius: 6px; padding: 0 .15em; }
+.exemple__pied { display: flex; align-items: center; gap: .5rem; color: var(--encre-2); font-size: .9rem; }
+.exemple__pied a { font-weight: 700; }
+.tableau-signes { display: grid; gap: .5rem; }
+.ligne-signe { display: flex; align-items: center; gap: 1rem; }
+.ligne-signe .ar-petit { font-size: 2rem; width: 2.5rem; text-align: center; color: var(--lapis); flex: none; }
+
+/* ---------- Réglages ---------- */
+.section-reglage { display: grid; gap: .2rem; }
+.section-reglage > h2 { margin-bottom: .4rem; }
+.reglage { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--trait); }
+.reglage:last-child { border-bottom: 0; }
+.reglage__texte { display: grid; gap: .1rem; flex: 1; min-width: 0; }
+.reglage__texte small { color: var(--encre-2); font-size: .9rem; }
+.reglage--colonne { flex-direction: column; align-items: stretch; }
+.interrupteur { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 3.2rem; height: 1.9rem; border-radius: 999px; background: var(--trait); border: 0; cursor: pointer; transition: background .15s; }
+.interrupteur::after { content: ''; position: absolute; top: .2rem; left: .2rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .3); transition: transform .15s; }
+.interrupteur:checked { background: var(--lapis); }
+.interrupteur:checked::after { transform: translateX(1.3rem); }
+.segment { display: inline-flex; padding: .25rem; gap: .2rem; background: var(--surface-2); border-radius: 999px; flex-wrap: wrap; }
+.segment button { min-height: 2.3rem; padding: .2rem .85rem; border: 0; border-radius: 999px; background: transparent; font-weight: 700; color: var(--encre-2); }
+.segment button[aria-pressed="true"] { background: var(--surface); color: var(--lapis); box-shadow: var(--ombre); }
+.apercu-ar { padding: 1rem; background: var(--surface); border: 1px solid var(--trait); border-radius: var(--rayon); }
+textarea.sauvegarde { width: 100%; min-height: 6rem; padding: .7rem; border: 2px solid var(--trait); border-radius: 12px; background: var(--surface); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; resize: vertical; }
+.credits { color: var(--encre-2); font-size: .92rem; display: grid; gap: .5rem; }
+
+/* ---------- Fenêtre et message ---------- */
+.dialogue { width: min(30rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.2rem; border: 0; border-radius: 20px; background: var(--surface); color: var(--encre); box-shadow: 0 20px 60px rgb(0 0 0 / .35); overflow: auto; }
+.dialogue::backdrop { background: rgb(8 14 32 / .6); }
+.dialogue__fermer { position: absolute; top: .5rem; right: .5rem; }
+.message {
+  position: fixed; z-index: 60; left: 50%; bottom: calc(var(--h-nav) + 1rem + env(safe-area-inset-bottom, 0px));
+  max-width: min(32rem, calc(100vw - 2rem));
+  transform: translate(-50%, 1rem); opacity: 0; pointer-events: none;
+  padding: .75rem 1.1rem; border-radius: 14px; background: var(--encre); color: var(--fond); font-weight: 700; text-align: center;
+  transition: opacity .2s, transform .2s;
+}
+.message.visible { opacity: 1; transform: translate(-50%, 0); }
+body.avec-lecteur .message { bottom: calc(var(--h-nav) + 5.5rem + env(safe-area-inset-bottom, 0px)); }
+
+/* ---------- Grand écran : navigation à gauche ---------- */
+@media (min-width: 56rem) {
+  .app { padding-left: 14rem; }
+  .nav { top: 0; right: auto; width: 14rem; grid-template-columns: 1fr; align-content: start; gap: .2rem; padding: 1.2rem .8rem; border-top: 0; border-right: 1px solid var(--trait); }
+  .nav a { flex-direction: row; justify-content: flex-start; gap: .8rem; min-height: 3rem; padding: 0 1rem; border-radius: 12px; font-size: 1rem; }
+  .nav a[aria-current="page"] { background: var(--lapis-doux); }
+  .nav a[aria-current="page"]::before { display: none; }
+  .pastille { position: static; margin-left: auto; }
+  .lecteur { left: 14rem; bottom: 0; }
+  main { padding-bottom: 4rem; }
+  body.avec-lecteur main { padding-bottom: 8rem; }
+  .message, body.avec-lecteur .message { left: calc(50% + 7rem); bottom: 1.5rem; }
+  body.avec-lecteur .message { bottom: 6rem; }
+  .grille-lettres { grid-template-columns: repeat(7, 1fr); }
+}
+@media (max-width: 22rem) {
+  .grille-lettres { grid-template-columns: repeat(3, 1fr); }
+  .options { grid-template-columns: 1fr; }
+}

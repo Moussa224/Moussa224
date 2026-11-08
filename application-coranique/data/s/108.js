@@ -1,0 +1,1 @@
+(window.TEXTES=window.TEXTES||{})[108]=[["إِنَّآ أَعۡطَيۡنَٰكَ ٱلۡكَوۡثَرَ","Inna a‘taynaka alkawthara","Nous t'avons certes, accordé l'Abondance"],["فَصَلِّ لِرَبِّكَ وَٱنۡحَرۡ","Fassalli lirabbika wainhar","Accomplis la Salât pour ton Seigneur et sacrifie"],["إِنَّ شَانِئَكَ هُوَ ٱلۡأَبۡتَرُ","Inna chaniaka houwa alabtarou","Celui qui te hait sera certes, sans postérité"]];
