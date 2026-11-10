@@ -9,6 +9,8 @@
 ## Modifier l'affiche
 
 - **Textes** : cherchez-les dans `index.html` (`le 11-11 à 11h11`, `ÎLE DE KASSA`, `GUINEA IS OPEN FOR BUSINESS`, `US`…).
-- **Photo** : remplacez `photo.webp` (gardez 1206 px de large pour 716 px de haut ; le bas peut être
-  rendu transparent pour se fondre dans le dégradé, ou laissez le voile `.tint` faire le travail).
+- **Photo** : `photo.webp` est un montage (fond flou + portrait détouré en buste, tête centrée vers
+  x = 628, sommet du crâne vers y = 38). Pour changer de photo, remplacez ce fichier
+  (1206 px de large pour 716 px de haut, ×2 recommandé ; le bas peut être rendu transparent pour se
+  fondre dans le dégradé, sinon le voile `.tint` fait le travail).
 - **Couleurs** : variables `--orange` et `--green` en haut de `index.html`.
