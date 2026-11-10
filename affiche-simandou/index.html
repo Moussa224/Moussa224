@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Affiche – La Guinée reçoit le monde</title>
+<style>
+  @font-face { font-family: "Poppins"; font-weight: 500; src: url("fonts/Poppins-Medium.ttf"); }
+  @font-face { font-family: "Poppins"; font-weight: 600; src: url("fonts/Poppins-SemiBold.ttf"); }
+  @font-face { font-family: "Poppins"; font-weight: 700; src: url("fonts/Poppins-Bold.ttf"); }
+  @font-face { font-family: "Montserrat"; font-weight: 100 900; src: url("fonts/Montserrat-Variable.ttf"); }
+  @font-face { font-family: "Great Vibes"; src: url("fonts/GreatVibes-Regular.ttf"); }
+  @font-face { font-family: "Allura"; src: url("fonts/Allura-Regular.ttf"); }
+
+  :root {
+    --orange: #f39a2e;
+    --green:  #349b3d;
+    --green-dark: #2b8a46;
+    --logo-green: #2f9b4e;
+    --logo-orange: #f1962d;
+  }
+  html, body { margin: 0; background: #1b1b1b; }
+  body { display: flex; justify-content: center; }
+
+  /* Affiche : 1206 × 1326 px (format de l'original) */
+  .poster {
+    position: relative; width: 1206px; height: 1326px; overflow: hidden;
+    background: linear-gradient(65deg, var(--orange) 0%, var(--orange) 36%, var(--green) 66%, var(--green) 100%);
+  }
+  .photo { position: absolute; left: 0; top: 0; width: 1206px; height: 716px; display: block; }
+  /* Voile couleur : la photo se teinte peu à peu d'orange/vert vers le bas, comme sur l'original */
+  .tint {
+    position: absolute; inset: 0;
+    background: linear-gradient(65deg, var(--orange) 0%, var(--orange) 36%, var(--green) 66%, var(--green) 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 520px, rgba(0,0,0,.28) 610px, rgba(0,0,0,.8) 690px, #000 760px);
+            mask-image: linear-gradient(to bottom, transparent 0, transparent 520px, rgba(0,0,0,.28) 610px, rgba(0,0,0,.8) 690px, #000 760px);
+  }
+  .tint-sides {
+    position: absolute; inset: 0;
+    background: linear-gradient(65deg, var(--orange) 0%, var(--orange) 36%, var(--green) 66%, var(--green) 100%);
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 270px, transparent 380px, transparent 840px, #000 950px, #000 100%),
+                        linear-gradient(to bottom, transparent 0, transparent 430px, rgba(0,0,0,.55) 590px, #000 680px);
+    -webkit-mask-composite: source-in;
+            mask-image: linear-gradient(to right, #000 0, #000 270px, transparent 380px, transparent 840px, #000 950px, #000 100%),
+                        linear-gradient(to bottom, transparent 0, transparent 430px, rgba(0,0,0,.55) 590px, #000 680px);
+            mask-composite: intersect;
+  }
+  .overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .script-sh { filter: drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
+  .sans-sh   { filter: drop-shadow(0 3px 8px rgba(0,0,0,.20)); }
+</style>
+</head>
+<body>
+<div class="poster" id="poster">
+
+  <!-- Photo (à remplacer par la vôtre : photo.webp / photo.png, 1206 px de large) -->
+  <img class="photo" src="photo.webp" alt="">
+  <div class="tint"></div>
+  <div class="tint-sides"></div>
+
+  <svg class="overlay" viewBox="0 0 1206 1326" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- motif géométrique discret en bas à gauche -->
+      <pattern id="geo" width="64" height="64" patternUnits="userSpaceOnUse" patternTransform="rotate(0)">
+        <path d="M32 2 L62 32 L32 62 L2 32 Z" fill="none" stroke="#fff" stroke-width="1.6"/>
+        <path d="M32 16 L48 32 L32 48 L16 32 Z" fill="none" stroke="#fff" stroke-width="1.2"/>
+        <path d="M0 0 L64 0 M0 64 L64 64" stroke="#fff" stroke-width="0.8"/>
+      </pattern>
+      <linearGradient id="geoFade" x1="0" y1="0" x2="1" y2="0.35">
+        <stop offset="0" stop-color="#fff" stop-opacity="0.16"/>
+        <stop offset="0.55" stop-color="#fff" stop-opacity="0.05"/>
+        <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>
+      <mask id="geoMask">
+        <rect x="0" y="880" width="640" height="446" fill="url(#geoFade)"/>
+      </mask>
+
+      <linearGradient id="mtnGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f6a73f"/>
+        <stop offset="1" stop-color="#ee9229"/>
+      </linearGradient>
+      <linearGradient id="pillGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#319650"/>
+        <stop offset="1" stop-color="#26803f"/>
+      </linearGradient>
+      <linearGradient id="pillEdge" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f6d98a" stop-opacity="0"/>
+        <stop offset="0.6" stop-color="#f6d98a" stop-opacity="0.1"/>
+        <stop offset="1" stop-color="#f6d98a" stop-opacity="0.85"/>
+      </linearGradient>
+    </defs>
+
+    <!-- motif -->
+    <rect x="0" y="880" width="640" height="446" fill="url(#geo)" mask="url(#geoMask)"/>
+
+    <!-- ===== Logo « Simandou Mining Summit » (haut gauche) ===== -->
+    <g id="logo">
+      <path id="logoMountain" fill="#2f9b4e"/>
+      <text x="163" y="177" textLength="251" lengthAdjust="spacingAndGlyphs"
+            font-family="Poppins" font-weight="500" font-size="57" fill="#2f9b4e">Simandou</text>
+      <text x="150" y="220" textLength="141" lengthAdjust="spacingAndGlyphs"
+            font-family="Poppins" font-weight="700" font-size="42" fill="#f1962d">Mining</text>
+      <rect x="295" y="186" width="119" height="43" rx="10" fill="#2f9b4e"/>
+      <text x="354.5" y="216" text-anchor="middle" textLength="92" lengthAdjust="spacingAndGlyphs"
+            font-family="Poppins" font-weight="500" font-size="26" fill="#fff">Summit</text>
+    </g>
+
+    <!-- ===== Montagne orange (au-dessus du titre) ===== -->
+    <path id="bigMountain" fill="url(#mtnGrad)" style="filter: drop-shadow(0 3px 5px rgba(0,0,0,.12))"/>
+
+    <!-- ===== Titre ===== -->
+    <g class="script-sh">
+      <text id="la" x="118" y="929" font-family="Great Vibes" font-size="234" fill="#fff">La</text>
+    </g>
+    <g class="sans-sh">
+      <text id="guinee" x="388" y="920" textLength="606" lengthAdjust="spacingAndGlyphs"
+            font-family="Montserrat" font-weight="800" font-size="140" fill="#fff">Guinée</text>
+    </g>
+    <g class="script-sh">
+      <text id="recoit" x="382" y="1004" textLength="632" lengthAdjust="spacingAndGlyphs"
+            font-family="Great Vibes" font-size="98" fill="#fff">Reçoit le Monde</text>
+    </g>
+
+    <!-- ===== Bandeau date / lieu ===== -->
+    <g>
+      <rect x="228" y="1038" width="742" height="53" rx="26.5" fill="url(#pillGrad)"/>
+      <rect x="228.75" y="1038.75" width="740.5" height="51.5" rx="25.75" fill="none" stroke="url(#pillEdge)" stroke-width="1.5"/>
+      <text x="281" y="1078" textLength="311" lengthAdjust="spacing"
+            font-family="Montserrat" font-weight="600" font-size="43" fill="#fff">le 11-11 à 11h11</text>
+      <!-- épingle rouge -->
+      <g transform="translate(634,1064)">
+        <path d="M0 -17 C-9.5 -17 -15 -10 -15 -2.5 C-15 6 -6 13 0 20 C6 13 15 6 15 -2.5 C15 -10 9.5 -17 0 -17 Z" fill="#d9262c"/>
+        <circle cx="0" cy="-3.5" r="5" fill="#fbe9e9"/>
+      </g>
+      <text x="666" y="1077" textLength="252" lengthAdjust="spacingAndGlyphs"
+            font-family="Montserrat" font-weight="700" font-size="35.5" fill="#fff">ÎLE DE KASSA</text>
+    </g>
+
+    <!-- ===== Slogan ===== -->
+    <text x="309" y="1129" textLength="581" lengthAdjust="spacing"
+          font-family="Montserrat" font-weight="600" font-size="33" fill="#fff">GUINEA IS OPEN FOR BUSINESS</text>
+
+    <!-- ===== US / C'est nous ===== -->
+    <g class="sans-sh">
+      <text x="539" y="1233" textLength="139" lengthAdjust="spacingAndGlyphs"
+            font-family="Montserrat" font-weight="800" font-size="106" fill="#fff">US</text>
+    </g>
+    <g class="script-sh">
+      <text x="538" y="1281" textLength="134" lengthAdjust="spacingAndGlyphs"
+            font-family="Allura" font-size="44" fill="#fff">C’est nous</text>
+    </g>
+  </svg>
+</div>
+
+<script>
+  /* Trace un « coup de pinceau » : ligne centrale (Catmull-Rom) à épaisseur variable → polygone SVG. */
+  function brush(points, wMin, wMax, power) {
+    const N = 240, pts = [];
+    const P = [points[0], ...points, points[points.length - 1]];
+    for (let i = 1; i < P.length - 2; i++) {
+      for (let t = 0; t < 1; t += 1 / 24) {
+        const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+        const t2 = t * t, t3 = t2 * t;
+        pts.push([0, 1].map(k => 0.5 * ((2 * p1[k]) + (-p0[k] + p2[k]) * t +
+          (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3)));
+      }
+    }
+    pts.push(points[points.length - 1]);
+    // longueur cumulée
+    const L = [0];
+    for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const total = L[L.length - 1];
+    const left = [], right = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      let dx = b[0] - a[0], dy = b[1] - a[1]; const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+      const s = L[i] / total;
+      const w = (wMin + (wMax - wMin) * Math.pow(Math.sin(Math.PI * s), power)) / 2;
+      left.push([pts[i][0] - dy * w, pts[i][1] + dx * w]);
+      right.push([pts[i][0] + dy * w, pts[i][1] - dx * w]);
+    }
+    const all = left.concat(right.reverse());
+    return 'M' + all.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' L') + ' Z';
+  }
+
+  // Grande montagne orange (coordonnées de l'affiche)
+  document.getElementById('bigMountain').setAttribute('d', brush([
+    [357, 820], [393, 777], [443, 757], [477, 780], [507, 795], [567, 727], [633, 673],
+    [700, 710], [767, 777], [790, 797], [807, 737], [840, 737], [900, 777], [977, 810]
+  ], 6, 44, 0.28));
+
+  // Petite montagne verte du logo
+  document.getElementById('logoMountain').setAttribute('d', brush([
+    [93, 139], [135, 108], [181, 82], [203, 108], [217, 128], [230, 105], [243, 94], [265, 110], [289, 129]
+  ], 3, 19, 0.3));
+</script>
+</body>
+</html>
