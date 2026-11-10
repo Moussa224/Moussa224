@@ -15,13 +15,19 @@ echo s'ouvre que sur cet ordinateur (http://localhost:4747). Gratuit, aucun jeto
 echo.
 
 rem --- 1. Node.js 18 ou plus --------------------------------------------
+rem Juste apres son installation, une fenetre deja ouverte ne connait pas encore
+rem Node.js : on le cherche aussi a son emplacement habituel (sans parentheses :
+rem le PATH de Windows en contient parfois, ce qui casserait un bloc).
+where node >nul 2>nul
+if errorlevel 1 if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%ProgramFiles%\nodejs;%PATH%"
 node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 18 ? 0 : 1)" >nul 2>nul
 if errorlevel 1 (
   echo Node.js 18 ou plus est introuvable.
   echo.
   echo 1. Installez la version "LTS" depuis https://nodejs.org/
-  echo 2. Gardez les options par defaut pendant l'installation.
-  echo 3. Puis double-cliquez de nouveau sur ce fichier.
+  echo    Gardez les options par defaut pendant l'installation.
+  echo 2. Si c'est deja fait : redemarrez l'ordinateur, puis double-cliquez
+  echo    de nouveau sur ce fichier.
   echo.
   start "" "https://nodejs.org/"
   pause
