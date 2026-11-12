@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="claude:viewport-fit-sides" content="cover">
+  <title>NetCore Lab</title>
+  <meta name="description" content="Simulateur 3D de technicien réseau : câblez des switchs, configurez-les en console et réussissez vos missions.">
+  <meta name="theme-color" content="#030d0d">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="c" aria-label="Vue 3D du laboratoire"></canvas>
+
+  <!-- ===== HUD ===== -->
+  <div id="hud" hidden>
+    <section id="obj" class="panel">
+      <header>
+        <span id="lvl" class="lvl">NIVEAU 1</span>
+        <span class="xp"><b id="xp">20</b> XP</span>
+        <button id="objToggle" class="mini" aria-label="Réduire la liste des objectifs">–</button>
+      </header>
+      <ul id="tasks"></ul>
+    </section>
+
+    <div id="tools">
+      <button id="btnBag" class="chip" aria-label="Ouvrir le sac d’équipement">Sac <kbd>I</kbd></button>
+      <button id="btnHelp" class="chip" aria-label="Aide et commandes">?</button>
+      <button id="btnSound" class="chip" aria-label="Couper ou activer le son">Son</button>
+    </div>
+
+    <div id="reticle"></div>
+    <div id="heldBadge" hidden></div>
+    <div id="prompt" hidden></div>
+    <div id="toasts" aria-live="polite"></div>
+
+    <div id="dialog" hidden>
+      <div class="who"><b id="dlgName"></b><span id="dlgRole"></span></div>
+      <p id="dlgText"></p>
+      <button id="dlgNext" class="go">Continuer <kbd>E</kbd></button>
+    </div>
+  </div>
+
+  <!-- ===== Commandes tactiles ===== -->
+  <div id="touch">
+    <div id="stick"><i id="knob"></i></div>
+    <div id="tbtns">
+      <button id="tbStow" class="tb pill" hidden>Ranger</button>
+      <button id="tbC" class="tb" hidden>C<small>Console</small></button>
+      <button id="tbB" class="tb" hidden>B<small>Infos</small></button>
+      <button id="tbE" class="tb big">E</button>
+    </div>
+  </div>
+
+  <!-- ===== Sac d'équipement ===== -->
+  <div id="bag" class="modal" hidden>
+    <div class="sheet bagsheet" role="dialog" aria-label="Sac d’équipement">
+      <header><h2>Sac d’équipement <span id="bagCount"></span></h2><button id="bagClose" class="x" aria-label="Fermer">×</button></header>
+      <ul id="bagList"></ul>
+    </div>
+  </div>
+
+  <!-- ===== Panneau de câblage ===== -->
+  <div id="cab" class="modal dark" hidden>
+    <header class="cabhead"><h2 id="cabTitle"></h2><button id="cabClose" class="x" aria-label="Fermer">Échap ×</button></header>
+    <div id="face" class="face"></div>
+    <p id="cabLinks" class="cablinks"></p>
+    <p id="cabHint" class="cabhint"></p>
+    <svg id="cabSvg" aria-hidden="true"><path id="cabPath" fill="none" stroke-width="7" stroke-linecap="round"/></svg>
+    <div id="plug" class="plug" hidden>
+      <span class="plugbody"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span id="plugLabel" class="pluglabel">Saisir l’extrémité</span>
+    </div>
+    <div id="dragTip" hidden></div>
+  </div>
+
+  <!-- ===== Console PuTTY ===== -->
+  <div id="con" class="modal" hidden>
+    <div class="win" role="dialog" aria-label="Console PuTTY">
+      <div class="bar">
+        <span id="conTitle">PuTTY CONSOLE CONNECTION</span>
+        <button id="hintToggle" class="mbtn">Indice</button>
+        <button id="conClose" class="x" aria-label="Fermer la console">×</button>
+      </div>
+      <div class="wbody">
+        <div class="term" id="term">
+          <div class="out" id="out"></div>
+          <label class="inl"><span id="ps1"></span><input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Commande"></label>
+        </div>
+        <aside id="hintPane">
+          <h4>Niveaux d’indice</h4>
+          <div id="hintList"></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Infos appareil ===== -->
+  <div id="info" class="modal" hidden>
+    <div class="sheet" role="dialog" aria-label="Informations sur l’appareil">
+      <header><h2 id="infoTitle"></h2><button id="infoClose" class="x" aria-label="Fermer">×</button></header>
+      <div id="infoBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== Aide ===== -->
+  <div id="help" class="modal" hidden>
+    <div class="sheet" role="dialog" aria-label="Aide">
+      <header><h2>Commandes</h2><button id="helpClose" class="x" aria-label="Fermer">×</button></header>
+      <div class="keys">
+        <div><kbd>Z Q S D</kbd><span>Se déplacer (ou W A S D, flèches)</span></div>
+        <div><kbd>Souris</kbd><span>Regarder (cliquez sur la vue pour capturer la souris)</span></div>
+        <div><kbd>E</kbd><span>Interagir : câbler, parler, ouvrir une porte</span></div>
+        <div><kbd>C</kbd><span>Ouvrir la console CLI du PC visé</span></div>
+        <div><kbd>B</kbd><span>Infos sur l’appareil visé</span></div>
+        <div><kbd>I</kbd><span>Sac d’équipement (câbles)</span></div>
+        <div><kbd>G</kbd><span>Ranger le câble en main</span></div>
+        <div><kbd>Maj</kbd><span>Courir</span></div>
+        <div><kbd>Échap</kbd><span>Fermer une fenêtre</span></div>
+      </div>
+      <p class="note">Sur téléphone : joystick à gauche pour avancer, glissez à droite pour regarder, boutons E / C / B pour agir.</p>
+    </div>
+  </div>
+
+  <!-- ===== Écran titre ===== -->
+  <div id="title" class="screen">
+    <div class="titlebox">
+      <p class="eyebrow">Network Company · Salle technique</p>
+      <h1>NetCore <span>Lab</span></h1>
+      <p class="lead">Vous êtes technicien réseau. Équipez-vous de câbles, branchez-les port par port, puis configurez le switch depuis la console.</p>
+      <button id="btnStart" class="go big">Commencer</button>
+      <ul class="intro">
+        <li><b>1</b> Ouvrez le sac, prenez un câble</li>
+        <li><b>2</b> Glissez l’extrémité sur le bon port</li>
+        <li><b>3</b> Tapez les commandes du switch</li>
+      </ul>
+      <p class="small" id="titleKeys">Z Q S D pour marcher · souris pour regarder · E interagir · C console · B infos · I sac</p>
+    </div>
+  </div>
+
+  <!-- ===== Fin de partie ===== -->
+  <div id="end" class="screen" hidden>
+    <div class="titlebox">
+      <p class="eyebrow">Mission accomplie</p>
+      <h1 id="endRank">Technicien</h1>
+      <div id="endStats" class="stats"></div>
+      <div class="row">
+        <button id="btnContinue" class="go">Continuer à explorer</button>
+        <button id="btnReplay" class="ghost">Rejouer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="document.write('&lt;script src=&quot;lib/three.min.js&quot;&gt;&lt;\/script&gt;')"></script>
+  <script src="js/data.js"></script>
+  <script src="js/cli.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
