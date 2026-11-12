@@ -37,6 +37,23 @@ function noise(d, vol, hp) {
   s.buffer = buf; f.type = 'highpass'; f.frequency.value = hp || 800; g.gain.value = vol || 0.1;
   s.connect(f); f.connect(g); g.connect(a.destination); s.start();
 }
+let amb = null;
+function startAmbient() {
+  const a = actx(); if (!a || amb) return;
+  const g = a.createGain(); g.gain.value = soundOn ? 1 : 0; g.connect(a.destination);
+  [[55, 0.016], [110, 0.007], [165, 0.003]].forEach(([f, v]) => {
+    const o = a.createOscillator(), og = a.createGain(); o.type = 'sine'; o.frequency.value = f; og.gain.value = v; o.connect(og); og.connect(g); o.start();
+  });
+  const n = a.sampleRate * 2, buf = a.createBuffer(1, n, a.sampleRate), ch = buf.getChannelData(0); let last = 0;
+  for (let i = 0; i < n; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; ch[i] = last * 3.2; }
+  const src = a.createBufferSource(), ng = a.createGain(); src.buffer = buf; src.loop = true; ng.gain.value = 0.045; src.connect(ng); ng.connect(g); src.start();
+  amb = g;
+}
+function footstep() {
+  const wood = P.x > 8.2;
+  noise(wood ? 0.07 : 0.05, wood ? 0.05 : 0.035, wood ? 400 : 180);
+  tone((wood ? 120 : 85) + Math.random() * 20, 0.07, 'sine', 0.035);
+}
 const sfx = {
   plug() { noise(0.06, 0.3, 1800); tone(150, 0.09, 'square', 0.05, 0.02, 80); },
   ok() { tone(660, 0.14, 'triangle', 0.07); tone(990, 0.22, 'triangle', 0.07, 0.11); },
@@ -46,6 +63,13 @@ const sfx = {
   door() { noise(0.55, 0.07, 300); },
   pick() { tone(520, 0.07, 'triangle', 0.05); tone(780, 0.08, 'triangle', 0.05, 0.05); }
 };
+
+/* ---------- Journal d'événements (station d'analyse) ---------- */
+const EVLOG = [];
+function logEvent(msg, kind) {
+  EVLOG.push({ t: S.t0 ? (performance.now() - S.t0) / 1000 : 0, msg, kind: kind || '' });
+  if (EVLOG.length > 80) EVLOG.shift();
+}
 
 /* ---------- Toasts ---------- */
 function toast(msg, kind, ms) {
@@ -99,6 +123,7 @@ function checkMissions() {
     if (m.level === S.level && !S.done[m.id] && m.done()) {
       S.done[m.id] = true; S.xp += m.xp;
       toast('Mission accomplie : ' + m.title + '  +' + m.xp + ' XP', 'good', 5500); sfx.ok();
+      logEvent('Mission accomplie : ' + m.title + ' (+' + m.xp + ' XP)', 'ok');
     }
   });
   const lv = S.level;
@@ -129,18 +154,62 @@ function equip(type) {
 }
 function stow() {
   if (!held) { toast('Vous ne tenez aucun câble.'); return; }
-  held = null; resetHeldVisuals(); sfx.pick(); toast('Câble rangé dans le sac.'); afterCableChange();
+  const had = held.ends.find(e => e);
+  held = null; resetHeldVisuals(); sfx.pick(); toast('Câble rangé dans le sac.');
+  if (had) logEvent('Câble débranché de ' + DEVICES[had.dev].name + ' (' + portOf(had).label + ') et rangé', 'warn');
+  afterCableChange();
 }
 
 /* ---------- Sac d'équipement ---------- */
 function openBag() {
   const keysList = Object.keys(CABLE_TYPES);
-  $('bagCount').textContent = '(' + keysList.length + ')';
+  $('bagCount').textContent = '(' + (keysList.length + 1) + ')';
   $('bagList').innerHTML = keysList.map((k, i) =>
-    '<li><button data-k="' + k + '" style="--cc:' + CABLE_TYPES[k].hex + '"><span class="ic"></span><span><b>' + esc(CABLE_TYPES[k].name) + '<kbd>' + (i + 1) + '</kbd></b><span>' + esc(CABLE_TYPES[k].desc) + '</span></span></button></li>').join('');
+    '<li><button data-k="' + k + '" style="--cc:' + CABLE_TYPES[k].hex + '"><span class="ic"></span><span><b>' + esc(CABLE_TYPES[k].name) + '<kbd>' + (i + 1) + '</kbd></b><span>' + esc(CABLE_TYPES[k].desc) + '</span></span></button></li>').join('') +
+    '<li><button data-k="analysis" style="--cc:#2dff8e"><span class="ic"></span><span><b>Station d’analyse<kbd>5</kbd></b><span>Terminal d’analyste : topologie du réseau en direct et journal des événements (touche T).</span></span></button></li>';
   show('bag');
 }
-$('bagList').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) equip(b.dataset.k); });
+$('bagList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-k]'); if (!b) return;
+  if (b.dataset.k === 'analysis') { closeModal(); openAnalysis(); } else equip(b.dataset.k);
+});
+
+/* ---------- Station d'analyse ---------- */
+const TOPO = { pc2: [78, 62], sw2: [430, 62], sw1: [255, 160], pc1: [78, 262], srv: [440, 262] };
+function openAnalysis() {
+  const col = { switch: '#35e0ff', pc: '#2dff8e', server: '#ffb02e' };
+  let svg = '<defs><pattern id="gr" width="26" height="26" patternUnits="userSpaceOnUse"><path d="M26 0H0V26" fill="none" stroke="#12262a" stroke-width="1"/></pattern></defs><rect width="520" height="330" fill="url(#gr)"/>';
+  const groups = {};
+  cables.forEach(c => { const k = [c.ends[0].dev, c.ends[1].dev].sort().join('>'); (groups[k] = groups[k] || []).push(c); });
+  cables.forEach(c => {
+    const a = c.ends[0], b = c.ends[1], cc = CABLE_TYPES[c.type].hex;
+    const grp = groups[[a.dev, b.dev].sort().join('>')], off = (grp.indexOf(c) - (grp.length - 1) / 2) * 9;
+    const [ax0, ay0] = TOPO[a.dev], [bx0, by0] = TOPO[b.dev], L0 = Math.hypot(bx0 - ax0, by0 - ay0) || 1;
+    const nx = -(by0 - ay0) / L0 * off, ny = (bx0 - ax0) / L0 * off;
+    const x1 = ax0 + nx, y1 = ay0 + ny, x2 = bx0 + nx, y2 = by0 + ny;
+    svg += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="' + cc + '" stroke-width="3.5" stroke-linecap="round"' + (c.type === 'console' ? ' stroke-dasharray="8 6"' : '') + '/>';
+    const lab = (e, ex, ey, ox, oy) => { const L = Math.hypot(ox - ex, oy - ey) || 1, k = Math.min(0.45, 74 / L); const x = ex + (ox - ex) * k, y = ey + (oy - ey) * k; return '<text class="pl" x="' + x.toFixed(0) + '" y="' + (y - 5).toFixed(0) + '" text-anchor="middle" style="fill:' + cc + '">' + esc(portOf(e).label) + '</text>'; };
+    svg += lab(a, x1, y1, x2, y2) + lab(b, x2, y2, x1, y1);
+  });
+  Object.keys(TOPO).forEach(id => {
+    const d = DEVICES[id], [x, y] = TOPO[id];
+    let sub = d.ip;
+    if (d.kind === 'switch') {
+      const ps = IFNAMES.filter(k => CFG[id].ifs[k].ps).map(ifShort), vl = Object.keys(CFG[id].vlans).filter(v => +v !== 1);
+      sub = [ps.length ? 'PS ' + ps.join(',') : '', vl.length ? 'VLAN ' + vl.join(',') : ''].filter(Boolean).join(' · ') || d.ip;
+    }
+    svg += '<rect x="' + (x - 54) + '" y="' + (y - 24) + '" width="108" height="48" rx="9" fill="#08171a" stroke="' + col[d.kind] + '" stroke-width="2"/>' +
+      '<text class="nm" x="' + x + '" y="' + (y - 4) + '" text-anchor="middle">' + esc(d.name) + '</text>' +
+      '<text class="sub" x="' + x + '" y="' + (y + 13) + '" text-anchor="middle">' + esc(sub) + '</text>';
+  });
+  $('topo').innerHTML = svg;
+  const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+  $('anaLog').innerHTML = EVLOG.length
+    ? EVLOG.slice().reverse().map(e => '<li class="' + e.kind + '"><time>' + fmt(e.t) + '</time>' + esc(e.msg) + '</li>').join('')
+    : '<li>Aucun événement pour le moment. Branchez un câble ou configurez un switch.</li>';
+  show('ana');
+}
+$('anaClose').addEventListener('click', closeModal);
 
 /* ---------- Panneau de câblage ---------- */
 const Cab = { dev: null, drag: false, x: 0, y: 0, swallow: false };
@@ -219,9 +288,11 @@ function attemptPlug(pid) {
   sfx.plug();
   if (other) {
     const c = held; cables.push(c); held = null;
+    logEvent('Lien ' + CABLE_TYPES[c.type].name.toLowerCase() + ' : ' + DEVICES[other.dev].name + ' ' + portOf(other).label + ' ↔ ' + DEVICES[end.dev].name + ' ' + portOf(end).label, 'ok');
     toast(CABLE_TYPES[c.type].name + ' branché : ' + DEVICES[other.dev].name + ' (' + portOf(other).label + ') ↔ ' + DEVICES[end.dev].name + ' (' + portOf(end).label + ')', 'good', 6000);
   } else {
     held.hand = 1 - held.hand;
+    logEvent(CABLE_TYPES[held.type].name + ' branché sur ' + DEVICES[end.dev].name + ' (' + portOf(end).label + '), autre extrémité libre', '');
     toast('Première extrémité branchée sur ' + DEVICES[end.dev].name + ' (' + portOf(end).label + '). Portez l’autre extrémité vers l’autre appareil.', 'good', 7000);
   }
   afterCableChange(); closeModal();
@@ -235,6 +306,7 @@ function pullOut(pid) {
     cables.splice(cables.indexOf(hit.cable), 1);
     hit.cable.ends[hit.k] = null; hit.cable.hand = hit.k; held = hit.cable; resetHeldVisuals();
   }
+  logEvent('Extrémité débranchée de ' + DEVICES[Cab.dev].name + ' (' + portOf({ dev: Cab.dev, port: pid }).label + ')', 'warn');
   sfx.pick(); afterCableChange(); renderFace(); updateCabHint();
   const pl = $('plug'); pl.hidden = false; pl.style.setProperty('--cc', CABLE_TYPES[held.type].hex);
   $('plugLabel').textContent = 'Saisir · ' + CABLE_TYPES[held.type].name;
@@ -319,7 +391,9 @@ function submitCmd() {
   const inp = $('cmd'), cli = Con.cli, v = inp.value;
   printLine(cli.prompt() + v, 'echo');
   cli.clear = false;
+  const modeBefore = cli.mode;
   const out = cli.exec(v);
+  if (v.trim() && ['config', 'if', 'vlan'].includes(modeBefore) && !/^%|\n%/.test(out) && !/^(do|exit|end)\b/i.test(v.trim())) logEvent(cli.cfg.host + ' : ' + v.trim(), 'cfg');
   if (cli.clear) { Con.logs[Con.dev] = []; $('out').innerHTML = ''; }
   else if (out) printLine(out, /^%|\n%/.test(out) ? 'err' : '');
   inp.value = ''; $('ps1').textContent = cli.prompt();
@@ -471,6 +545,7 @@ function toggleDoor(d) { d.open = !d.open; sfx.door(); }
 function finish() {
   const sec = Math.round((performance.now() - S.t0) / 1000), mm = Math.floor(sec / 60), ss = String(sec % 60).padStart(2, '0');
   $('endRank').textContent = rankFor(S.xp);
+  saveBest({ xp: S.xp, rank: rankFor(S.xp), time: mm + ':' + ss });
   $('endStats').innerHTML = [['XP total', S.xp], ['Missions', Object.keys(S.done).length + ' / ' + MISSIONS.length], ['Temps', mm + ':' + ss], ['Indices utilisés', S.hintsUsed]]
     .map(([k, v]) => '<div><b>' + v + '</b><span>' + k + '</span></div>').join('');
   show('end');
@@ -544,9 +619,11 @@ window.addEventListener('keydown', e => {
   if (ui === 'bag') {
     if (k === 'i' || k === 'tab') { e.preventDefault(); closeModal(); }
     else if (/^[1-4]$/.test(k)) equip(Object.keys(CABLE_TYPES)[+k - 1]);
+    else if (k === '5') { closeModal(); openAnalysis(); }
     return;
   }
   if (ui === 'info') { if (k === 'b') closeModal(); return; }
+  if (ui === 'ana') { if (k === 't') closeModal(); return; }
   if (ui === 'help') { if (k === 'h' || k === '?') closeModal(); return; }
   if (ui) return;
   if (e.code && /^(KeyW|KeyA|KeyS|KeyD|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|ShiftLeft|ShiftRight)$/.test(e.code)) { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); return; }
@@ -555,6 +632,7 @@ window.addEventListener('keydown', e => {
   else if (k === 'b') doAct('B');
   else if (k === 'i' || k === 'tab') { e.preventDefault(); openBag(); }
   else if (k === 'g') stow();
+  else if (k === 't') openAnalysis();
   else if (k === 'h' || k === '?') show('help');
   else if (k === 'm') toggleSound();
 });
@@ -610,7 +688,7 @@ const T = { stick: null, look: null, sx: 0, sy: 0, lx: 0, ly: 0 };
 })();
 
 /* ---------- Boutons HUD ---------- */
-function toggleSound() { soundOn = !soundOn; $('btnSound').classList.toggle('off', !soundOn); }
+function toggleSound() { soundOn = !soundOn; $('btnSound').classList.toggle('off', !soundOn); if (amb) amb.gain.value = soundOn ? 1 : 0; }
 $('btnBag').addEventListener('click', () => { if (!ui) openBag(); });
 $('btnHelp').addEventListener('click', () => { if (!ui) show('help'); });
 $('btnSound').addEventListener('click', toggleSound);
@@ -625,6 +703,7 @@ if (isTouch) $('titleKeys').textContent = 'Joystick à gauche pour marcher · gl
 
 /* ---------- Joueur ---------- */
 const R = 0.3;
+let lastStep = 0;
 function blocked(x, z) {
   for (const c of COLLIDERS) {
     if (!c.on) continue;
@@ -649,16 +728,71 @@ function updatePlayer(dt) {
     if (!blocked(P.x + dx, P.z)) P.x += dx;
     if (!blocked(P.x, P.z + dz)) P.z += dz;
     P.moving = true; P.bob += dt * (keys.ShiftLeft || keys.ShiftRight ? 9 : 6.5);
+    const si = Math.floor(P.bob / Math.PI); if (si !== lastStep) { lastStep = si; if (S.phase === 'play') footstep(); }
   }
   camera.position.set(P.x, 1.65 + (P.moving ? Math.sin(P.bob) * 0.03 : 0), P.z);
   camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ');
   handsRig.position.set(Math.cos(P.bob * 0.5) * (P.moving ? 0.012 : 0), Math.sin(P.bob) * (P.moving ? 0.01 : 0), 0);
 }
 
+/* ---------- Guide d'objectif et repères à l'écran ---------- */
+const NEED_CABLE = { m1: 'console', m3: 'straight', m4: 'cross', m5: 'fiber' };
+const MISSION_DEVS = { m1: ['sw1', 'pc1'], m2: ['pc1'], m3: ['pc2', 'sw1'], m4: ['sw1', 'sw2'], m5: ['sw1', 'srv'], m6: ['pc1'] };
+function guideInfo() {
+  const dev = id => ({ name: DEVICES[id].name, pos: () => DEV3D[id].center });
+  if (S.final) return S.coffee ? null : { name: 'Machine à café', note: 'Cafétéria, à l’est du hall d’accueil.', pos: () => V(12.9, 1.3, 5.5) };
+  const todo = MISSIONS.filter(m => m.level === S.level && !S.done[m.id]);
+  if (!todo.length) { const n = NPCS.find(x => x.id === 'manager'); return { name: 'M. Diallo', note: 'Parlez-lui pour valider le niveau.', pos: () => V(n.x, 1.5, n.z) }; }
+  const m = todo[0], devs = MISSION_DEVS[m.id], need = NEED_CABLE[m.id];
+  let id = devs[0], note;
+  if (need) {
+    const plugged = held && held.ends.find(e => e), nm = CABLE_TYPES[need].name.toLowerCase();
+    if (!held) note = 'Prenez le ' + nm + ' dans le sac (' + (isTouch ? 'bouton Sac' : 'I') + ').';
+    else if (!plugged && held.type !== need) note = 'Mauvais câble en main : il faut le ' + nm + '.';
+    else if (plugged) { const other = devs.find(d => d !== plugged.dev); if (other) id = other; note = 'Branchez l’autre extrémité ici.'; }
+    else note = 'Branchez la première extrémité (E).';
+  } else note = m.id === 'm2' ? 'Ouvrez la console (C) et sécurisez fa0/3.' : 'Ouvrez la console (C) et créez le VLAN.';
+  return { name: dev(id).name, note, pos: dev(id).pos };
+}
+const _g2 = new THREE.Vector3(), _mv = new THREE.Vector3();
+let gCache = '';
+function updateGuide() {
+  const g = S.phase === 'play' ? guideInfo() : null, box = $('guide'), bc = $('beacon');
+  if (!g) { if (!box.hidden) box.hidden = true; bc.hidden = true; return; }
+  const p = g.pos(), dx = p.x - P.x, dz = p.z - P.z, dist = Math.hypot(dx, dz);
+  const rel = Math.atan2(dx * Math.cos(P.yaw) + dz * -Math.sin(P.yaw), dx * -Math.sin(P.yaw) + dz * -Math.cos(P.yaw));
+  box.hidden = false;
+  $('gArrow').style.transform = 'rotate(' + (rel * 180 / Math.PI).toFixed(0) + 'deg)';
+  const ds = dist < 1.8 ? 'ici' : Math.round(dist) + ' m', key = g.name + '|' + g.note + '|' + ds;
+  if (key !== gCache) { gCache = key; $('gName').textContent = g.name; $('gNote').textContent = g.note; $('gDist').textContent = ds; }
+  // balise : visible à l'écran quand l'objectif est devant nous et un peu loin
+  camera.getWorldDirection(_g2);
+  const front = (p.x - camera.position.x) * _g2.x + (p.y - camera.position.y) * _g2.y + (p.z - camera.position.z) * _g2.z;
+  if (ui || front < 1 || dist < 3.2) { bc.hidden = true; return; }
+  _mv.set(p.x, p.y + 0.4, p.z).project(camera);
+  const W = window.innerWidth, Hh = window.innerHeight;
+  bc.hidden = false;
+  bc.style.left = Math.max(40, Math.min(W - 40, (_mv.x * 0.5 + 0.5) * W)) + 'px';
+  bc.style.top = Math.max(110, Math.min(Hh - 140, (-_mv.y * 0.5 + 0.5) * Hh)) + 'px';
+  $('bcName').textContent = g.name + ' · ' + Math.round(dist) + ' m';
+}
+function updateMarker() {
+  const m = $('marker');
+  if (!target || ui) { if (!m.hidden) m.hidden = true; return; }
+  const p = target.pos(); _mv.set(p.x, p.y, p.z).project(camera);
+  if (_mv.z > 1) { m.hidden = true; return; }
+  m.hidden = false;
+  m.style.left = ((_mv.x * 0.5 + 0.5) * window.innerWidth) + 'px'; m.style.top = ((-_mv.y * 0.5 + 0.5) * window.innerHeight) + 'px';
+}
+
+/* ---------- Meilleur résultat (stockage local facultatif) ---------- */
+function loadBest() { try { return JSON.parse(localStorage.getItem('netcore-lab-best') || 'null'); } catch (e) { return null; } }
+function saveBest(b) { try { const o = loadBest(); if (!o || b.xp > o.xp) localStorage.setItem('netcore-lab-best', JSON.stringify(b)); } catch (e) { /* stockage indisponible */ } }
+
 /* ---------- Démarrage et boucle ---------- */
 function startGame() {
-  if (S.phase !== 'title') return;
-  actx(); S.phase = 'play'; S.t0 = performance.now(); ui = null;
+  if (S.phase !== 'title' || !renderer) return;
+  actx(); startAmbient(); S.phase = 'play'; S.t0 = performance.now(); ui = null;
   $('title').hidden = true; $('hud').hidden = false;
   if (isTouch || window.innerWidth <= 640) { $('obj').classList.add('min'); $('objToggle').textContent = '+'; }
   renderObjectives(); updateHeldBadge();
@@ -667,13 +801,23 @@ function startGame() {
 }
 $('btnStart').addEventListener('click', startGame);
 
+const Q = { max: 1, acc: 0, n: 0, t: 0 };
+function adaptQuality(dt) {
+  if (window.__noAdapt || S.phase !== 'play') return;
+  Q.t += dt; if (Q.t < 3) return;
+  Q.acc += dt; Q.n++;
+  if (Q.acc < 2) return;
+  const avg = Q.acc / Q.n, cur = renderer.getPixelRatio(); Q.acc = 0; Q.n = 0;
+  if (avg > 1 / 26 && cur > 0.6) { renderer.setPixelRatio(Math.max(0.6, cur - 0.2)); resizeWorld(); }
+  else if (avg < 1 / 55 && cur < Q.max) { renderer.setPixelRatio(Math.min(Q.max, cur + 0.1)); resizeWorld(); }
+}
 let last = performance.now(), clock = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
   updatePlayer(dt);
   updateWorld(clock, dt, P);
-  if (S.phase === 'play') updatePrompt();
+  if (S.phase === 'play') { updatePrompt(); updateGuide(); updateMarker(); adaptQuality(dt); }
   renderer.render(scene, camera);
 }
 
@@ -692,11 +836,15 @@ async function boot() {
   cables.push(pre);
   buildInteractables();
   syncCableMeshes(); stickyRefresh();
+  Q.max = renderer.getPixelRatio();
   onResize(); renderObjectives();
-  window.__game = { S, P, cables, DEVICES, CFG, DEV3D, NPCS, DOORS, INTER, Con, Cab, MISSIONS,
+  window.__game = { EVLOG, guideInfo, openAnalysis, S, P, cables, DEVICES, CFG, DEV3D, NPCS, DOORS, INTER, Con, Cab, MISSIONS,
     get held() { return held; }, get ui() { return ui; }, get target() { return target; },
     equip, openCab, attemptPlug, openConsole, openInfo, openBag, startGame, checkMissions, talk, takeCoffee, stow, show, closeModal, submitCmd, renderHints };
   requestAnimationFrame(frame);
+  const sb = $('btnStart'); sb.disabled = false; sb.textContent = 'Commencer';
+  const best = loadBest();
+  if (best) { const bl = $('bestLine'); bl.hidden = false; bl.textContent = 'Meilleur résultat : ' + best.xp + ' XP · ' + best.rank + ' · ' + best.time; }
   document.body.classList.add('ready');
 }
 boot();

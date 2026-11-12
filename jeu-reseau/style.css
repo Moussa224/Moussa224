@@ -98,6 +98,7 @@ kbd {
 #dialog p { margin: 8px 0 12px; font-size: 15.5px; line-height: 1.5; min-height: 3em; }
 .go { padding: 9px 18px; border: 1.5px solid var(--neon); border-radius: 9px; background: rgba(45,255,142,.14); color: var(--neon); font-weight: 700; letter-spacing: .02em; }
 .go:hover { background: rgba(45,255,142,.26); }
+.go:disabled { opacity: .5; cursor: progress; }
 .go.big { padding: 13px 34px; font-size: 18px; }
 .ghost { padding: 9px 18px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--ink); }
 #dialog .go { float: right; }
@@ -222,6 +223,32 @@ h1 span { color: var(--neon); }
 .keys kbd { margin: 0; justify-self: start; }
 .note { margin: 6px 0 0; font-size: 12.5px; color: var(--mut); }
 
+/* ---------- Guide, repères, station d'analyse ---------- */
+#guide { display: flex; align-items: center; gap: 10px; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); }
+#gArrow { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border: 1.5px solid var(--amber); border-radius: 50%; color: var(--amber); font: 700 17px/1 var(--mono); }
+.gtxt { min-width: 0; }
+.gtxt b { display: block; font-size: 13px; color: var(--amber); }
+.gtxt small { display: block; font-size: 11.5px; line-height: 1.3; color: var(--mut); }
+#gDist { margin-left: auto; font: 400 12px var(--mono); color: var(--mut); white-space: nowrap; }
+#marker { position: absolute; width: 48px; height: 48px; border: 2px solid var(--neon); border-radius: 50%; transform: translate(-50%, -50%); opacity: .8; box-shadow: 0 0 14px rgba(45,255,142,.45); pointer-events: none; animation: ring 1.4s ease-in-out infinite; }
+@keyframes ring { 50% { transform: translate(-50%, -50%) scale(1.14); opacity: .4; } }
+#beacon { position: absolute; transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 1px; font: 600 11px var(--ui); color: var(--amber); text-shadow: 0 0 6px #000, 0 0 3px #000; white-space: nowrap; pointer-events: none; }
+#beacon i { width: 0; height: 0; border: 7px solid transparent; border-top: 11px solid var(--amber); border-bottom: 0; }
+.anasheet { width: min(900px, 100%); }
+.anagrid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+#topo { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #050f12; }
+#topo text { font-family: var(--mono); fill: var(--ink); }
+#topo .nm { font-weight: 700; font-size: 13px; }
+#topo .sub { font-size: 9.5px; fill: var(--mut); }
+#topo .pl { font-size: 9.5px; paint-order: stroke; stroke: #050f12; stroke-width: 4px; }
+.anah { margin: 0 0 8px; font: 700 11px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--neon); }
+#anaLog { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; max-height: 330px; overflow-y: auto; font: 400 11.5px/1.4 var(--mono); }
+#anaLog li { padding: 4px 8px; border-left: 3px solid var(--mut); background: rgba(255,255,255,.035); border-radius: 0 6px 6px 0; }
+#anaLog li.ok { border-color: var(--neon); }
+#anaLog li.warn { border-color: var(--amber); }
+#anaLog li.cfg { border-color: var(--cyan); }
+#anaLog time { color: var(--mut); margin-right: 8px; }
+
 /* ---------- Tactile ---------- */
 #touch { display: none; position: fixed; inset: 0; z-index: 6; pointer-events: none; }
 body.touch #touch { display: block; }
@@ -250,6 +277,8 @@ body.touch .toast { text-align: center; }
   #hintPane { width: auto; max-height: 34%; padding: 0 14px 12px; border-top: 1px solid rgba(120,140,200,.16); }
   .term { margin: 10px; padding: 8px 10px; font-size: 13px; }
   .win { height: calc(var(--vvh) - 20px); }
+  .anagrid { grid-template-columns: 1fr; }
+  #anaLog { max-height: 150px; }
   .face.switch { grid-template-columns: 1fr; }
   .sw-side { grid-template-columns: repeat(3, 64px); justify-content: end; }
   #obj { width: calc(100vw - var(--gx) - var(--gxr) - 70px); max-width: 340px; }

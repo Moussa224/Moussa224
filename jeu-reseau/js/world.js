@@ -49,6 +49,7 @@ function initMaterials() {
   MAT.sw = phong(0x2a3236, { shininess: 70, specular: 0x99aaaa });
   MAT.portOff = basic(0x050909);
   MAT.portOn = basic(0x39ff7a);
+  MAT.portDim = basic(0x17803f);
   MAT.portSfp = basic(0x2a2008);
   MAT.portCon = basic(0x0b3a46);
   MAT.neonG = basic(0x2dff8e);
@@ -268,12 +269,18 @@ function makeSwitch(id, x, y, z, rotY) {
   });
   const dir = V(0, 0, 1).applyAxisAngle(V(0, 1, 0), rotY);
   const anchor = pid => { const l = swPortLocal(pid); return { pos: g.localToWorld(V(l.x, l.y, front + 0.005)), dir: dir.clone() }; };
+  let linked = [];
+  TICKERS.push(t => {
+    linked.forEach((e, i) => { e.m.material = Math.sin(t * 6.5 + i * 2.1) > -0.55 ? MAT.portOn : MAT.portDim; });
+    led.visible = Math.sin(t * 3 + x) > -0.2;
+  });
   DEV3D[id] = {
     g, anchor, center: g.position.clone().add(V(0, 0.05, 0)), ports,
     refresh() {
+      linked = [];
       DEVICES[id].ports.forEach(p => {
         const e = ports[p.id], on = peer(id, p.id) && !(CFG[id].ifs[p.id] && CFG[id].ifs[p.id].shutdown);
-        e.m.material = on ? MAT.portOn : e.base;
+        if (on) linked.push(e); else e.m.material = e.base;
       });
     }
   };
@@ -656,18 +663,26 @@ function buildWorld(canvas) {
 
 function buildHands() {
   handsRig = new THREE.Group(); camera.add(handsRig);
-  const skin = phong(0xc9987a, { shininess: 20 }), glove = phong(0x0d0f10, { shininess: 30 }), sleeve = phong(0x16201f);
-  const hand = new THREE.Group(); hand.position.set(0.3, -0.27, -0.52); hand.rotation.set(-0.25, -0.2, 0.15); handsRig.add(hand);
-  box(0.095, 0.03, 0.11, skin, 0, 0, 0, hand);
-  box(0.1, 0.035, 0.06, glove, 0, 0.005, 0.03, hand);
-  for (let i = 0; i < 4; i++) {
-    const f = new THREE.Group(); f.position.set(-0.036 + i * 0.024, 0.0, -0.055); f.rotation.x = 0.35 + i * 0.05; hand.add(f);
-    box(0.02, 0.022, 0.06 - (i === 3 ? 0.008 : 0), i < 3 ? glove : skin, 0, 0, -0.03, f);
-  }
-  const th = box(0.024, 0.024, 0.06, skin, -0.065, 0.0, -0.01, hand); th.rotation.y = 0.6;
-  const arm = cyl(0.04, 0.05, 0.5, skin, 0.03, -0.05, 0.3, hand, 10); arm.rotation.x = Math.PI / 2 - 0.15;
-  const sl = cyl(0.055, 0.06, 0.3, sleeve, 0.04, -0.06, 0.5, hand, 10); sl.rotation.x = Math.PI / 2 - 0.15;
-  handTip = new THREE.Object3D(); handTip.position.set(0.0, 0.0, -0.1); hand.add(handTip);
+  const skin = phong(0xc99373, { shininess: 25, emissive: 0x4a2c1c, emissiveIntensity: 0.55 });
+  const glove = phong(0x1b2022, { shininess: 40, emissive: 0x0b0e0f, emissiveIntensity: 1 });
+  const sleeve = phong(0x1d302d, { emissive: 0x08110f, emissiveIntensity: 1 });
+  const hand = new THREE.Group(); hand.position.set(0.24, -0.25, -0.5); hand.rotation.set(0.0, 0.3, 0.12); handsRig.add(hand);
+  box(0.082, 0.03, 0.085, glove, 0, 0, 0.0, hand);                // paume gantée
+  box(0.084, 0.012, 0.045, glove, 0, 0.018, 0.012, hand);         // dos de la main
+  const lens = [0.05, 0.058, 0.054, 0.042];
+  lens.forEach((len, i) => {                                      // quatre doigts à deux phalanges
+    const f1 = new THREE.Group(); f1.position.set(-0.03 + i * 0.02, 0, -0.042); f1.rotation.x = -0.32 - i * 0.05; hand.add(f1);
+    box(0.018, 0.02, len, glove, 0, 0, -len / 2, f1);
+    const f2 = new THREE.Group(); f2.position.set(0, 0, -len); f2.rotation.x = -0.7; f1.add(f2);
+    box(0.016, 0.017, len * 0.85, skin, 0, 0, -len * 0.42, f2);
+  });
+  const th = new THREE.Group(); th.position.set(-0.044, 0.004, -0.01); th.rotation.set(-0.2, 0.8, 0); hand.add(th);
+  box(0.021, 0.021, 0.048, glove, 0, 0, -0.024, th);
+  const th2 = new THREE.Group(); th2.position.set(0, 0, -0.048); th2.rotation.x = -0.4; th.add(th2);
+  box(0.018, 0.018, 0.038, skin, 0, 0, -0.019, th2);
+  const arm = cyl(0.028, 0.036, 0.5, skin, 0.05, -0.03, 0.3, hand, 10); arm.rotation.x = Math.PI / 2 - 0.2;
+  const sl = cyl(0.044, 0.056, 0.5, sleeve, 0.058, -0.045, 0.62, hand, 10); sl.rotation.x = Math.PI / 2 - 0.2;
+  handTip = new THREE.Object3D(); handTip.position.set(-0.02, 0.0, -0.1); hand.add(handTip);
   handsRig.userData.hand = hand;
 }
 

@@ -24,6 +24,11 @@
         <button id="objToggle" class="mini" aria-label="Réduire la liste des objectifs">–</button>
       </header>
       <ul id="tasks"></ul>
+      <div id="guide" hidden>
+        <span id="gArrow" aria-hidden="true">↑</span>
+        <span class="gtxt"><b id="gName"></b><small id="gNote"></small></span>
+        <span id="gDist"></span>
+      </div>
     </section>
 
     <div id="tools">
@@ -33,6 +38,8 @@
     </div>
 
     <div id="reticle"></div>
+    <div id="marker" hidden></div>
+    <div id="beacon" hidden><span id="bcName"></span><i></i></div>
     <div id="heldBadge" hidden></div>
     <div id="prompt" hidden></div>
     <div id="toasts" aria-live="polite"></div>
@@ -60,6 +67,20 @@
     <div class="sheet bagsheet" role="dialog" aria-label="Sac d’équipement">
       <header><h2>Sac d’équipement <span id="bagCount"></span></h2><button id="bagClose" class="x" aria-label="Fermer">×</button></header>
       <ul id="bagList"></ul>
+    </div>
+  </div>
+
+  <!-- ===== Station d'analyse ===== -->
+  <div id="ana" class="modal" hidden>
+    <div class="sheet anasheet" role="dialog" aria-label="Station d’analyse">
+      <header><h2>Station d’analyse <span>· topologie en direct</span></h2><button id="anaClose" class="x" aria-label="Fermer">×</button></header>
+      <div class="anagrid">
+        <svg id="topo" viewBox="0 0 520 330" role="img" aria-label="Topologie du réseau"></svg>
+        <div>
+          <h3 class="anah">Journal</h3>
+          <ol id="anaLog"></ol>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -116,11 +137,13 @@
         <div><kbd>E</kbd><span>Interagir : câbler, parler, ouvrir une porte</span></div>
         <div><kbd>C</kbd><span>Ouvrir la console CLI du PC visé</span></div>
         <div><kbd>B</kbd><span>Infos sur l’appareil visé</span></div>
-        <div><kbd>I</kbd><span>Sac d’équipement (câbles)</span></div>
+        <div><kbd>I</kbd><span>Sac d’équipement (câbles, station d’analyse)</span></div>
+        <div><kbd>T</kbd><span>Station d’analyse : topologie et journal</span></div>
         <div><kbd>G</kbd><span>Ranger le câble en main</span></div>
         <div><kbd>Maj</kbd><span>Courir</span></div>
         <div><kbd>Échap</kbd><span>Fermer une fenêtre</span></div>
       </div>
+      <p class="note">Si la souris n’est pas capturée par la page, maintenez le clic gauche et glissez pour regarder.</p>
       <p class="note">Sur téléphone : joystick à gauche pour avancer, glissez à droite pour regarder, boutons E / C / B pour agir.</p>
     </div>
   </div>
@@ -131,12 +154,13 @@
       <p class="eyebrow">Network Company · Salle technique</p>
       <h1>NetCore <span>Lab</span></h1>
       <p class="lead">Vous êtes technicien réseau. Équipez-vous de câbles, branchez-les port par port, puis configurez le switch depuis la console.</p>
-      <button id="btnStart" class="go big">Commencer</button>
+      <button id="btnStart" class="go big" disabled>Chargement…</button>
       <ul class="intro">
         <li><b>1</b> Ouvrez le sac, prenez un câble</li>
         <li><b>2</b> Glissez l’extrémité sur le bon port</li>
         <li><b>3</b> Tapez les commandes du switch</li>
       </ul>
+      <p class="small" id="bestLine" hidden></p>
       <p class="small" id="titleKeys">Z Q S D pour marcher · souris pour regarder · E interagir · C console · B infos · I sac</p>
     </div>
   </div>

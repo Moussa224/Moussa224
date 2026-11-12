@@ -18,6 +18,7 @@ Ouvrez `index.html` dans un navigateur récent (Chrome, Edge, Firefox, Safari). 
 | Console CLI du PC visé | C | bouton C |
 | Infos sur l'appareil visé | B | bouton B |
 | Sac d'équipement | I | bouton Sac |
+| Station d'analyse (topologie, journal) | T | via le sac |
 | Ranger le câble | G | bouton Ranger |
 | Courir | Maj | |
 
@@ -28,6 +29,13 @@ Ouvrez `index.html` dans un navigateur récent (Chrome, Edge, Firefox, Safari). 
 3. Parler au responsable, puis prendre un café à la cafétéria.
 
 Chaque mauvais câble est refusé avec une explication. Les indices de la console coûtent 10 XP chacun.
+
+## Aides en jeu
+
+- Un **guide d'objectif** (flèche, nom de l'appareil, distance) indique où aller et quel câble prendre.
+- Un **repère** entoure l'appareil ou la personne visée, et une balise ambre signale l'objectif quand il est devant vous.
+- La **station d'analyse** (touche T) affiche la topologie réseau en direct, avec les câbles par type, et le journal des événements.
+- La qualité d'image s'adapte à la machine pour garder une bonne fluidité sur téléphone.
 
 ## Console
 
