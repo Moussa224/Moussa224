@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Défi Subnetting</title>
+  <meta name="description" content="Calculez un réseau, un broadcast et les adresses utilisables, comprenez chaque étape, puis entraînez-vous avec des défis.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a100d'/%3E%3Ctext x='32' y='42' font-size='26' text-anchor='middle' fill='%233be58f' font-family='monospace' font-weight='700'%3E/19%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <noscript>
+    <p class="noscript">Merci d'activer JavaScript pour utiliser le calculateur.</p>
+  </noscript>
+
+  <div class="page">
+
+    <header class="top">
+      <h1>Défi Subnetting</h1>
+      <p class="top__sub">Réseau, hôte ou broadcast ? Calculez, comprenez, puis entraînez-vous.</p>
+      <nav class="tabs" aria-label="Sections">
+        <a href="#calculateur" id="tab-calculateur" class="tabs__link">Calculateur</a>
+        <a href="#defi" id="tab-defi" class="tabs__link">Défi</a>
+      </nav>
+    </header>
+
+    <main>
+
+      <!-- ===================== CALCULATEUR ===================== -->
+      <section id="calculateur" class="panel" aria-labelledby="tab-calculateur">
+        <form class="finder" id="finder" autocomplete="off" novalidate>
+          <label class="finder__label" for="cidr">Adresse IP et préfixe</label>
+          <input class="finder__input" id="cidr" name="cidr" type="text" value="172.20.95.191/19"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="cidr-help cidr-error">
+          <p class="finder__help" id="cidr-help">
+            Écrivez <span class="mono">adresse/préfixe</span> (ou <span class="mono">adresse masque</span>), puis lisez la réponse et la méthode.
+          </p>
+          <p class="finder__error" id="cidr-error" role="alert"></p>
+          <ul class="chips" aria-label="Exemples">
+            <li><button type="button" class="chip mono" data-example="172.20.95.191/19">172.20.95.191/19</button></li>
+            <li><button type="button" class="chip mono" data-example="192.168.10.77/26">192.168.10.77/26</button></li>
+            <li><button type="button" class="chip mono" data-example="10.45.200.9/12">10.45.200.9/12</button></li>
+            <li><button type="button" class="chip mono" data-example="172.20.95.255/19">172.20.95.255/19</button></li>
+          </ul>
+        </form>
+
+        <div class="result" id="calc-result"></div>
+      </section>
+
+      <!-- ===================== DÉFI ===================== -->
+      <section id="defi" class="panel" aria-labelledby="tab-defi" hidden>
+        <div class="hook">
+          <p class="hook__kicker">Défi de subnetting</p>
+          <p class="hook__ip mono" id="defi-ip" aria-live="polite"></p>
+          <div class="hook__choices" id="defi-choices" role="group" aria-label="Votre réponse">
+            <button type="button" class="choice" data-answer="network">Réseau</button>
+            <button type="button" class="choice" data-answer="host">Hôte</button>
+            <button type="button" class="choice" data-answer="broadcast">Broadcast</button>
+          </div>
+          <p class="hook__ask" id="defi-ask">Sauras-tu le résoudre ?</p>
+        </div>
+
+        <div class="defi__bar">
+          <p class="defi__score" id="defi-score"></p>
+          <button type="button" class="link-button" id="defi-reveal">Voir la solution</button>
+        </div>
+
+        <div class="defi__after" id="defi-after" hidden>
+          <p class="feedback" id="defi-feedback" role="status"></p>
+          <button type="button" class="primary" id="defi-next">Défi suivant</button>
+        </div>
+
+        <div class="result" id="defi-solution"></div>
+      </section>
+
+    </main>
+
+    <footer class="foot">
+      <p>Tous les calculs se font sur votre appareil : aucune adresse n'est envoyée nulle part.</p>
+    </footer>
+
+  </div>
+
+  <script src="subnet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
