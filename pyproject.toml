@@ -28,5 +28,9 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
+[tool.ruff.lint.per-file-ignores]
+# Générateur du classeur Excel RH : tableaux de données d'exemple et formules, naturellement longs.
+"rh-tout-en-un/*" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
