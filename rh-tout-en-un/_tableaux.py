@@ -15,6 +15,8 @@ TABLEAUX = [
     ("Recrutement de talents", "Recrutement", "Recrutement de talents"),
     ("Relations du collaborateur", "Relations collab.", "Relations du collaborateur"),
 ]
+# Montants : « 142,3 M » à partir d'un million (GNF), nombre entier sinon (MAD, EUR…).
+MONTANT = '[>=1000000]#,##0.0,," M";#,##0'
 PALETTE = [ORANGE, TEAL, PINK, BLUE, GOLD, GREEN, "#8B5CF6", "#64748B"]
 
 
@@ -319,7 +321,7 @@ def tableau_dashboard(bk, ws):
     d0, d1 = L_DEPT, L_DEPT + len(D.DEPARTEMENTS) - 1
     _tuiles(bk, ws, 6, [
         ("Effectif actif", "=k_effectif", "0", "collaborateurs en poste"),
-        ("Masse salariale", "=k_masse", "#,##0", '=soc_devise&" brut / mois"'),
+        ("Masse salariale", "=k_masse", MONTANT, '=soc_devise&" brut / mois"'),
         ("Total CDI", "=k_cdi", "0", "contrats à durée indéterminée"),
         ("Total CDD", "=k_cdd", "0", "contrats à durée déterminée"),
     ])
@@ -330,7 +332,7 @@ def tableau_dashboard(bk, ws):
         ("Contrats à échéance", "=k_echeances", "0", "dans les 30 jours"),
     ])
     _bande(ws, 14, barres(bk, "Effectif par département", 0, 1, d0, d1, TEAL, "0", nom="Effectif"),
-           barres(bk, "Masse salariale par département", 0, 2, d0, d1, ORANGE, nom="Masse salariale"))
+           barres(bk, "Masse salariale par département", 0, 2, d0, d1, ORANGE, MONTANT, nom="Masse salariale"))
     _bande(ws, 29, anneau(bk, "Type de contrat", 0, 1, L_DIST, L_DIST + 1, couleurs=[TEAL, ORANGE]),
            anneau(bk, "Répartition hommes / femmes", 3, 4, L_DIST, L_DIST + 1, couleurs=[BLUE, PINK]))
     # Contrats à échéance

@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from datetime import time
+from pathlib import Path
 
 from _base import INPUT, LINE, MUTED, NAVY, PINK, TEAL, E, concat, dmy, hhmm, lignes, long_date
 
+LOGO = Path(__file__).resolve().parent / "logo-mgg.png"
+BLEU_MGG = "#1B429D"  # bleu du logo Multimédia Glory Guinée
 NCOL = 9  # colonnes A..I
 R = "$K$1"  # ligne du collaborateur dans la base (0 = matricule introuvable)
 MATRICULE = "$H$2"
@@ -38,7 +41,7 @@ PRO = E(f'IF({R}=0,"il/elle",IF(INDEX(bd_genre,{R})="Femme","elle","il"))')
 ADRESSE = E(f'IF({R}=0,"………",INDEX(bd_adresse,{R})&", "&INDEX(bd_ville,{R}))')
 SOCIETE = [
     s("nom"), " (", s("forme"), "), dont le siège est situé à ", s("adresse"), ", ", s("ville"), " (", s("pays"),
-    "), immatriculée au registre du commerce sous le n° ", s("rc"), ", identifiant fiscal / patente n° ", s("patente"),
+    "), immatriculée au RCCM sous le n° ", s("rc"), ", NIF n° ", s("patente"),
     ", affiliée à la CNSS sous le n° ", s("cnss"),
 ]
 
@@ -90,6 +93,22 @@ class Doc:
         self.row += 1  # ligne vide, hors zone d'impression
         self.top = self.row
         self.ws.set_row(self.row - 1, 8)
+        self.entete_societe()
+
+    def entete_societe(self):
+        """Papier à en-tête : logo, raison sociale et coordonnées, tirés de la feuille « Info société »."""
+        bk, ws, f = self.bk, self.ws, self.bk.fmt
+        r = self.row
+        bk.merge(ws, r, 1, r, NCOL - 1, '=soc_nom&" "&soc_forme', f(bold=True, font_size=17, font_color=BLEU_MGG, indent=1, valign="bottom"))
+        ws.set_row(r, 40)
+        bk.merge(ws, r + 1, 1, r + 1, NCOL - 1, '=soc_adresse&"  ·  "&soc_ville&", "&soc_pays&"  ·  Tél. "&soc_tel&"  ·  "&soc_email',
+                 f(font_size=9, font_color=MUTED, indent=1, valign="top", text_wrap=True))
+        ws.set_row(r + 1, 26)
+        bk.merge(ws, r + 2, 0, r + 2, NCOL - 1, "", f(top=2, top_color=BLEU_MGG))
+        ws.set_row(r + 2, 10)
+        if LOGO.exists():
+            ws.insert_image(r, 0, str(LOGO), {"x_scale": 0.19, "y_scale": 0.19, "x_offset": 6, "y_offset": 3, "object_position": 2})
+        self.row += 3
 
     # ----- mise en page du document -----
     def _fin_ligne(self, hauteur: float):
@@ -261,8 +280,6 @@ def avertissement(d: Doc):
     faits = d.champ("motif", "Faits reprochés", "retard répété sans justification")
     niveau = d.champ("niveau", "Sanction", "un avertissement", liste=["un avertissement", "un second avertissement", "un dernier avertissement avant mise à pied"])
     d.debut()
-    d.p(s("nom"), "  —  ", s("adresse"), ", ", s("ville"), bold=True, align="left")
-    d.sp(6)
     d.p(s("ville"), ", le ", E(long_date(date_doc)), align="right")
     d.sp(6)
     d.kv("À l’attention de :", CIV, " ", NOM)
@@ -342,8 +359,6 @@ def convocation(d: Doc):
     lieu = d.champ("lieu", "Lieu", "Bureau de la Direction")
     objet = d.champ("objet", "Objet de l’entretien", "une éventuelle sanction disciplinaire", liste=["une éventuelle sanction disciplinaire", "un éventuel licenciement", "votre situation professionnelle"])
     d.debut()
-    d.p(s("nom"), "  —  ", s("adresse"), ", ", s("ville"), bold=True, align="left")
-    d.sp(6)
     d.p(s("ville"), ", le ", E(long_date(date_doc)), align="right")
     d.sp(6)
     d.kv("À l’attention de :", CIV, " ", NOM)
@@ -366,8 +381,6 @@ def licenciement(d: Doc):
     preavis = d.champ("preavis", "Préavis (jours)", "=soc_preavis", "entier")
     effet = d.champ("effet", "Date de fin du contrat", f"=TODAY()+{preavis}", "date")
     d.debut()
-    d.p(s("nom"), "  —  ", s("adresse"), ", ", s("ville"), bold=True, align="left")
-    d.sp(6)
     d.p(s("ville"), ", le ", E(long_date(date_doc)), align="right")
     d.sp(6)
     d.kv("À l’attention de :", CIV, " ", NOM)
@@ -391,8 +404,6 @@ def demission(d: Doc):
     recu = d.champ("recu", "Date de réception de la lettre de démission", "=TODAY()-1", "date")
     preavis = d.champ("preavis", "Préavis (jours)", "=soc_preavis", "entier")
     d.debut()
-    d.p(s("nom"), "  —  ", s("adresse"), ", ", s("ville"), bold=True, align="left")
-    d.sp(6)
     d.p(s("ville"), ", le ", E(long_date(date_doc)), align="right")
     d.sp(6)
     d.kv("À l’attention de :", CIV, " ", NOM)
@@ -415,8 +426,6 @@ def fin_essai(d: Doc):
     fin_e = d.champ("fin", "Date de fin de la période d’essai", f"=IF({R}=0,TODAY(),EDATE(INDEX(bd_embauche,{R}),soc_essai))", "date")
     decision = d.champ("decision", "Décision", "confirmé(e) dans vos fonctions", liste=["confirmé(e) dans vos fonctions", "non confirmé(e) dans vos fonctions : il est mis fin à votre période d’essai"])
     d.debut()
-    d.p(s("nom"), "  —  ", s("adresse"), ", ", s("ville"), bold=True, align="left")
-    d.sp(6)
     d.p(s("ville"), ", le ", E(long_date(date_doc)), align="right")
     d.sp(6)
     d.kv("À l’attention de :", CIV, " ", NOM)
@@ -467,8 +476,8 @@ def solde_tout_compte(d: Doc):
 
 def ordre_mission(d: Doc):
     date_doc = d.date_doc()
-    dest = d.champ("dest", "Destination", "Casablanca")
-    objet = d.champ("objet", "Objet de la mission", "Rencontre avec un fournisseur")
+    dest = d.champ("dest", "Destination", "Kindia")
+    objet = d.champ("objet", "Objet de la mission", "Couverture d’un événement client")
     depart = d.champ("depart", "Date de départ", "=TODAY()+7", "date")
     retour = d.champ("retour", "Date de retour", "=TODAY()+9", "date")
     moyen = d.champ("moyen", "Moyen de transport", "Véhicule de service", liste=["Véhicule de service", "Véhicule personnel", "Train", "Avion", "Autocar / taxi"])

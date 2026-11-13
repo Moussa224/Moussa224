@@ -33,7 +33,7 @@ from _base import (  # noqa: E402
     TEAL,
     Book,
 )
-from _documents import DOCUMENTS, construire_documents  # noqa: E402
+from _documents import DOCUMENTS, LOGO, construire_documents  # noqa: E402
 from _tableaux import (  # noqa: E402
     CALC,
     D_LISTES,
@@ -102,7 +102,7 @@ def feuille_info(bk, ws):
     ws.set_landscape()
     ws.fit_to_pages(1, 1)
     r += 2
-    ws.merge_range(r, 0, r + 2, 2, "Exemple fictif : remplacez toutes les valeurs jaunes par celles de votre entreprise. Les modèles de contrats et de lettres sont des modèles généraux : faites-les valider par un juriste avant de les utiliser.", f(text_wrap=True, valign="top", font_size=10, font_color=MUTED, italic=True))
+    ws.merge_range(r, 0, r + 2, 2, "Complétez les cellules « (à compléter) » : adresse, RCCM, NIF, CNSS, représentant, téléphone, e-mail. Les modèles de contrats et de lettres sont des modèles généraux : faites-les valider par un juriste avant de les utiliser.", f(text_wrap=True, valign="top", font_size=10, font_color=MUTED, italic=True))
 
 
 # =====================================================================
@@ -348,10 +348,15 @@ def feuille_accueil(bk, ws):
     ws.set_row(0, 22)
     ws.set_row(1, 40)
     ws.set_row(2, 24)
-    ws.merge_range(0, 1, 2, 12, "", f(bg_color=NAVY, align="center", font_size=30, bold=True))
-    ws.write_rich_string(0, 1, f(bold=True, font_size=30, font_color="#FFFFFF"), "Le Tableau de bord ", f(bold=True, font_size=30, font_color=ORANGE), "RH complet",
+    # Tuile blanche du logo à gauche, titre sur fond marine à droite
+    ws.merge_range(0, 1, 3, 2, "", f(bg_color="#FFFFFF"))
+    if LOGO.exists():
+        ws.insert_image(0, 1, str(LOGO), {"x_scale": 0.33, "y_scale": 0.33, "x_offset": 30, "y_offset": 8, "object_position": 2})
+    ws.merge_range(0, 3, 2, 12, "", f(bg_color=NAVY, align="center", font_size=30, bold=True))
+    ws.write_rich_string(0, 3, f(bold=True, font_size=30, font_color="#FFFFFF"), "Le Tableau de bord ", f(bold=True, font_size=30, font_color=ORANGE), "RH complet",
                          f(bg_color=NAVY, align="center"))
-    bk.merge(ws, 3, 1, 3, 12, "Tout votre service RH dans un seul fichier", f(bold=True, font_size=15, font_color="#FFFFFF", bg_color=NAVY, align="center"))
+    bk.merge(ws, 3, 3, 3, 12, '=soc_nom&" "&soc_forme&"  ·  Tout votre service RH dans un seul fichier"',
+             f(bold=True, font_size=15, font_color="#FFFFFF", bg_color=NAVY, align="center"))
     ws.set_row(3, 28)
     ws.set_row(4, 14)
 
