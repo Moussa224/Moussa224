@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bloqueur de pubs</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" alt="" width="40" height="40">
+    <div class="title">
+      <h1>Bloqueur de pubs</h1>
+      <p id="status" aria-live="polite"></p>
+    </div>
+    <label class="switch">
+      <input id="master" type="checkbox" role="switch" aria-label="Activer le bloqueur de pubs">
+      <span class="track"></span>
+    </label>
+  </header>
+
+  <section class="stats" aria-label="Statistiques">
+    <div><strong id="tabCount">0</strong><span>pubs masquées<br>sur cet onglet</span></div>
+    <div><strong id="total">0</strong><span>pubs masquées<br>au total</span></div>
+  </section>
+
+  <section>
+    <h2>Réseaux sociaux</h2>
+    <ul id="sites"></ul>
+  </section>
+
+  <section>
+    <label class="row">
+      <span class="grow">
+        <b>Bloquer aussi les requêtes de pub</b>
+        <small>Coupe les connexions vers les régies publicitaires (hors YouTube).</small>
+      </span>
+      <span class="switch">
+        <input id="network" type="checkbox" role="switch" aria-label="Bloquer les requêtes publicitaires">
+        <span class="track"></span>
+      </span>
+    </label>
+  </section>
+
+  <footer>
+    <button id="reset" type="button">Remettre les compteurs à zéro</button>
+  </footer>
+
+  <script src="sites.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

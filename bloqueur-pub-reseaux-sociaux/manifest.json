@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Bloqueur de pubs - Réseaux sociaux",
+  "version": "1.0.0",
+  "description": "Masque les publicités et les posts sponsorisés sur Facebook, Instagram, X, YouTube, TikTok, LinkedIn, Reddit et Pinterest.",
+  "minimum_chrome_version": "105",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Bloqueur de pubs",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "declarativeNetRequest", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.facebook.com/*",
+        "*://*.instagram.com/*",
+        "*://*.x.com/*",
+        "*://*.twitter.com/*",
+        "*://*.youtube.com/*",
+        "*://*.tiktok.com/*",
+        "*://*.linkedin.com/*",
+        "*://*.reddit.com/*",
+        "*://*.pinterest.com/*",
+        "*://*.pinterest.fr/*"
+      ],
+      "js": ["sites.js", "engine.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
