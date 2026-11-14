@@ -4,16 +4,20 @@
  * Il masque (display:none) les pubs au lieu de les supprimer : on ne casse pas la page
  * et on peut tout réafficher d'un clic si l'on désactive le bloqueur.
  * Tout se passe dans le navigateur : rien n'est envoyé nulle part.
+ *
+ * Le moteur ne dépend d'aucun navigateur en particulier : on lui donne un « pont » qui sait
+ *   loadSettings()           → Promise<{ enabled, sites }>   les réglages actuels
+ *   onSettingsChange(rappel) → appelle rappel quand les réglages changent
+ *   report(n)                → n pubs viennent d'être masquées
+ * Extension de navigateur : content.js. Version téléphone (userscript) : telephone/bridge.js.
  */
-(() => {
+function bprStartEngine(bridge) {
   'use strict';
 
-  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) return;
   const site = bprFindSite(location.hostname);
   if (!site) return;
 
   const ATTR = 'data-bpr-hidden'; // posé sur chaque élément masqué
-  const ROOT_ATTR = 'data-bpr-on'; // posé sur <html> tant que le bloqueur est actif
   const LABEL_BUDGET = 300; // nombre maximal de textes lus par post (la mention est dans l'en-tête, donc au début)
   const PASS_DELAY = 200; // ms : une analyse au plus toutes les 200 ms, même si la page bouge sans arrêt
   const SAFETY_DELAY = 5000; // ms : réanalyse complète de secours
@@ -99,8 +103,7 @@
     }));
   const containerSel = rules.map((r) => r.container).join(',');
   const cssSel = (site.css || []).filter(valid).join(',');
-  const cssText =
-    `html[${ROOT_ATTR}] [${ATTR}]` + (cssSel ? `, html[${ROOT_ATTR}] :is(${cssSel})` : '') + '{display:none!important}';
+  const cssText = `[${ATTR}]` + (cssSel ? `, :is(${cssSel})` : '') + '{display:none!important}';
 
   /* ---------- Masquage ---------- */
 
@@ -125,13 +128,7 @@
     targets.delete(el);
   };
 
-  const report = (n) => {
-    try {
-      chrome.runtime.sendMessage({ type: 'hidden', n });
-    } catch (e) {
-      /* l'extension a été rechargée : cette page ne peut plus lui parler, sans gravité */
-    }
-  };
+  const report = (n) => bridge.report(n);
 
   const pass = () => {
     timer = 0;
@@ -212,24 +209,53 @@
     }
   };
 
+  /* ---------- Feuille de style ---------- */
+
+  // Certains sites interdisent les <style> ajoutés par un script (règle de sécurité « CSP »), ce qui ne
+  // gêne pas une extension mais bloquerait la version téléphone. Une feuille « adoptée » n'est pas concernée.
+  let sheet = null;
+  let style = null;
+
+  const installStyle = () => {
+    try {
+      if (!sheet) {
+        sheet = new CSSStyleSheet();
+        sheet.replaceSync(cssText);
+      }
+      if (!document.adoptedStyleSheets.includes(sheet)) {
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      }
+    } catch (e) {
+      sheet = null; // navigateur trop ancien : on retombe sur une balise <style>
+      if ((!style || !style.isConnected) && document.documentElement) {
+        style = document.createElement('style');
+        style.textContent = cssText;
+        document.documentElement.append(style);
+      }
+    }
+  };
+
+  const removeStyle = () => {
+    if (sheet) document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== sheet);
+    if (style) style.remove();
+    sheet = style = null;
+  };
+
   /* ---------- Marche / arrêt ---------- */
 
   let running = false;
   let observer = null;
-  let style = null;
   let safetyTimer = 0;
   let videoTimer = 0;
 
   const start = () => {
     if (running) return;
     running = true;
-    document.documentElement.setAttribute(ROOT_ATTR, '');
-    style = document.createElement('style');
-    style.textContent = cssText;
-    document.documentElement.append(style);
+    installStyle();
     observer = new MutationObserver(onMutations);
     observer.observe(document, { childList: true, subtree: true, characterData: true });
     safetyTimer = setInterval(() => {
+      installStyle(); // au cas où la page aurait écrasé nos styles
       epoch++;
       schedule();
     }, SAFETY_DELAY);
@@ -245,8 +271,7 @@
     clearInterval(videoTimer);
     clearTimeout(timer);
     timer = 0;
-    style.remove();
-    document.documentElement.removeAttribute(ROOT_ATTR);
+    removeStyle();
     for (const el of document.querySelectorAll(`[${ATTR}]`)) el.removeAttribute(ATTR);
     targets = new WeakMap();
     cssCounted = new WeakSet();
@@ -254,7 +279,7 @@
     restorePlayback();
   };
 
-  /* ---------- Réglages (fenêtre de l'extension) ---------- */
+  /* ---------- Réglages ---------- */
 
   const apply = (settings) => {
     const wanted = settings.enabled !== false && (settings.sites || {})[site.id] !== false;
@@ -263,9 +288,7 @@
   };
 
   apply(BPR_DEFAULTS); // on démarre tout de suite pour ne pas laisser passer de pub le temps de lire les réglages
-  const reload = () => chrome.storage.local.get(BPR_DEFAULTS).then(apply);
+  const reload = () => Promise.resolve(bridge.loadSettings()).then(apply);
   reload();
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && (changes.enabled || changes.sites)) reload();
-  });
-})();
+  bridge.onSettingsChange(reload);
+}

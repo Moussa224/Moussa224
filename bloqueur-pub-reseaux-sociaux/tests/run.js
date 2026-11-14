@@ -13,52 +13,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { mocks } = require('./mocks');
-
-const EXT = path.resolve(__dirname, '..');
-const OUT = process.env.TEST_OUT_DIR || os.tmpdir();
-
-let passed = 0;
-let failed = 0;
-const check = (name, ok, detail = '') => {
-  if (ok) passed++;
-  else failed++;
-  console.log(`${ok ? '  ok  ' : ' ECHEC'}  ${name}${ok || !detail ? '' : `\n          ${detail}`}`);
-};
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-const posts = (page) =>
-  page.evaluate(() =>
-    [...document.querySelectorAll('[data-t]')].map((e) => ({
-      t: e.dataset.t,
-      visible: e.checkVisibility(),
-      text: e.textContent.trim().slice(0, 25),
-    }))
-  );
-
-// Attend que tous les posts publicitaires soient masqués (ou 4 s), puis renvoie l'état des posts.
-const settle = async (page) => {
-  await page
-    .waitForFunction(
-      () => [...document.querySelectorAll('[data-t^="ad"]')].every((e) => !e.checkVisibility()),
-      null,
-      { timeout: 4000 }
-    )
-    .catch(() => {});
-  return posts(page);
-};
-
-const describeBad = (list) =>
-  list.filter((p) => (p.t === 'organic') !== p.visible).map((p) => `${p.t} « ${p.text} » visible=${p.visible}`).join(' ; ');
-
-const allCorrect = (list) => list.length > 0 && list.every((p) => (p.t === 'organic') === p.visible);
-
-async function openMock(ctx, name, { before } = {}) {
-  const mock = mocks[name];
-  const page = await ctx.newPage();
-  if (before) before(page);
-  await page.goto(mock.url);
-  return page;
-}
+const {
+  EXT, OUT, check, finish, sleep, posts, settle, describeBad, allCorrect, serveMocks, openMock, bigFeed,
+} = require('./helpers');
 
 async function main() {
   // 1. Cohérence manifeste / sites.js
@@ -69,7 +26,7 @@ async function main() {
   const matches = manifest.content_scripts[0].matches.map((m) => m.replace('*://*.', '').replace('/*', '')).sort();
   check('manifest.json et sites.js listent les mêmes domaines', JSON.stringify(hosts) === JSON.stringify(matches),
     `${hosts} ≠ ${matches}`);
-  for (const f of ['background.js', 'popup.html', 'sites.js', 'engine.js', ...Object.values(manifest.icons)]) {
+  for (const f of ['background.js', 'content.js', 'popup.html', 'sites.js', 'engine.js', ...Object.values(manifest.icons)]) {
     check(`fichier présent : ${f}`, fs.existsSync(path.join(EXT, f)));
   }
 
@@ -80,29 +37,7 @@ async function main() {
     headless: !process.env.HEADED,
     args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`],
   });
-  for (const [name, mock] of Object.entries(mocks)) {
-    await ctx.route(`${new URL(mock.url).origin}/**`, (route) => {
-      const request = route.request();
-      if (!request.url().endsWith('.webm')) {
-        return route.fulfill({ contentType: 'text/html; charset=utf-8', body: mock.page });
-      }
-      // Chromium ne laisse avancer une vidéo que si le serveur gère les requêtes « Range ».
-      const video = fs.readFileSync(path.join(__dirname, 'fixtures', 'video-2s.webm'));
-      const range = /bytes=(\d+)-(\d*)/.exec(request.headers().range || '');
-      const start = range ? Number(range[1]) : 0;
-      const end = range && range[2] ? Number(range[2]) : video.length - 1;
-      return route.fulfill({
-        status: range ? 206 : 200,
-        headers: {
-          'Content-Type': 'video/webm',
-          'Accept-Ranges': 'bytes',
-          'Content-Length': String(end - start + 1),
-          ...(range ? { 'Content-Range': `bytes ${start}-${end}/${video.length}` } : {}),
-        },
-        body: video.subarray(start, end + 1),
-      });
-    });
-  }
+  await serveMocks(ctx);
   let [sw] = ctx.serviceWorkers();
   if (!sw) sw = await ctx.waitForEvent('serviceworker');
   const extId = new URL(sw.url()).host;
@@ -252,26 +187,22 @@ async function main() {
   // 10. Gros fil : 600 posts dont 60 pubs, l'analyse doit rester rapide
   {
     const page = await ctx.newPage();
-    await page.route('https://www.facebook.com/big', (route) => {
-      const items = Array.from({ length: 600 }, (_, i) =>
-        i % 10 === 0
-          ? `<div><div role="article" data-t="ad"><h3>Marque ${i}</h3><span>Sponsorisé</span></div></div>`
-          : `<div><div role="article" data-t="organic"><h3>Ami ${i}</h3><p>${'Un long texte de publication. '.repeat(10)}</p></div></div>`
-      ).join('');
-      route.fulfill({ contentType: 'text/html; charset=utf-8', body: `<!doctype html><body><div role="feed">${items}</div></body>` });
-    });
-    const t0 = Date.now();
-    await page.goto('https://www.facebook.com/big');
-    const list = await settle(page);
-    const ms = Date.now() - t0;
+    const { list, ms } = await bigFeed(page);
     check(`gros fil (600 posts) : 60 pubs masquées en ${ms} ms`, allCorrect(list) && ms < 3000, describeBad(list));
+    await page.close();
+  }
+
+  // 11. Site qui interdit les <style> ajoutés par un script (CSP) : le masquage doit marcher quand même
+  {
+    const page = await openMock(ctx, 'facebook', { path: 'csp' });
+    const list = await settle(page);
+    check('page avec une CSP stricte sur les styles : pubs masquées', allCorrect(list), describeBad(list));
     await page.close();
   }
 
   await ctx.close();
   fs.rmSync(userDataDir, { recursive: true, force: true });
-  console.log(`\n${passed} réussis, ${failed} échoués`);
-  process.exit(failed ? 1 : 0);
+  process.exit(finish());
 }
 
 main().catch((e) => {

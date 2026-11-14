@@ -36,7 +36,7 @@
         "*://*.pinterest.com/*",
         "*://*.pinterest.fr/*"
       ],
-      "js": ["sites.js", "engine.js"],
+      "js": ["sites.js", "engine.js", "content.js"],
       "run_at": "document_start"
     }
   ]

@@ -7,7 +7,7 @@
  * réseaux n'ont pas changé leur code depuis.
  */
 
-const html = (body) => `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>maquette</title></head><body>${body}</body></html>`;
+const html = (body) => `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>maquette</title></head><body>${body}</body></html>`;
 
 // Image servie par une régie publicitaire : sert à vérifier le blocage réseau.
 const AD_PIXEL = '<img id="pixel" src="https://pagead2.googlesyndication.com/pagead/test.gif" width="1" height="1" alt="">';

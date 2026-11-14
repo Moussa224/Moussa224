@@ -5,11 +5,13 @@ Une extension pour navigateur qui **masque les publicités et les posts sponsori
 Facebook · Instagram · X (Twitter) · YouTube · TikTok · LinkedIn · Reddit · Pinterest
 
 Elle fonctionne sur **ordinateur**, dans Google Chrome, Microsoft Edge, Brave et Opera.
+Pour le **téléphone**, une version « script » existe : voir [Sur téléphone](#sur-téléphone).
 Elle ne collecte rien et n'envoie rien nulle part : tout se passe dans votre navigateur.
 
 ## Installer (2 minutes)
 
-1. Récupérez ce dossier sur votre ordinateur : sur GitHub, bouton vert **Code → Download ZIP**, puis décompressez.
+1. Récupérez ce dossier sur votre ordinateur : sur GitHub, choisissez la branche `claude/awesome-cray-s6pyhi`
+   (tant qu'elle n'est pas fusionnée dans `master`), bouton vert **Code → Download ZIP**, puis décompressez.
 2. Ouvrez la page des extensions de votre navigateur :
    - Chrome : tapez `chrome://extensions` dans la barre d'adresse
    - Edge : `edge://extensions` · Brave : `brave://extensions` · Opera : `opera://extensions`
@@ -47,9 +49,9 @@ Cliquez sur l'icône de l'extension :
 
 **Limites à connaître :**
 
-- **Pas sur téléphone.** Une extension ne peut pas agir dans les *applications* Facebook, Instagram, TikTok…
-  ni dans Chrome pour Android (qui ne gère pas les extensions). Sur mobile, utilisez plutôt le navigateur Brave
-  (bloqueur intégré) ou Firefox avec l'extension uBlock Origin, en ouvrant les réseaux depuis le navigateur.
+- **Pas dans les applications du téléphone.** Ni une extension ni un script ne peuvent agir dans les *applications*
+  Facebook, Instagram, TikTok… ni dans Chrome pour Android (qui ne gère pas les extensions).
+  Voir [Sur téléphone](#sur-téléphone) pour la solution.
 - **Les réseaux changent leur site en permanence** (et brouillent exprès la mention « Sponsorisé » sur Facebook).
   Cette extension a été testée sur des **maquettes** qui reproduisent la structure de chaque site, pas sur les sites
   réels : une pub peut donc passer à travers, ou une mise à jour d'un réseau peut casser une règle. Voir
@@ -62,6 +64,55 @@ Cliquez sur l'icône de l'extension :
   « Promoted »… hors de ce que les utilisateurs écrivent (légendes, commentaires). Si un vrai post disparaît,
   coupez le réseau concerné dans la fenêtre de l'extension.
 
+## Sur téléphone
+
+Les applications (Facebook, Instagram, TikTok…) ne peuvent pas être modifiées. Il faut donc ouvrir les réseaux
+**dans le navigateur du téléphone**, avec la version « script » de l'outil :
+[`telephone/bloqueur-pub-reseaux-sociaux.user.js`](telephone/bloqueur-pub-reseaux-sociaux.user.js).
+C'est le même moteur que l'extension, dans un seul fichier.
+
+Lien d'installation du script (à ouvrir **dans le navigateur indiqué ci-dessous**) :
+`https://raw.githubusercontent.com/Moussa224/Moussa224/claude/awesome-cray-s6pyhi/bloqueur-pub-reseaux-sociaux/telephone/bloqueur-pub-reseaux-sociaux.user.js`
+(quand la branche sera fusionnée, remplacez `claude/awesome-cray-s6pyhi` par `master`).
+
+### Android : Firefox + Violentmonkey
+
+1. Installez **Firefox** depuis le Play Store.
+2. Dans Firefox : menu ⋮ → **Modules complémentaires** → installez **Violentmonkey** (ou Tampermonkey).
+3. Toujours dans Firefox, ouvrez le lien d'installation du script ci-dessus. Violentmonkey propose de l'installer : confirmez.
+4. Ouvrez Facebook, Instagram, etc. **dans Firefox** (pas dans l'application).
+
+### iPhone : Safari + Userscripts
+
+1. Installez l'application gratuite **Userscripts** depuis l'App Store et ouvrez-la une fois (elle demande un dossier
+   où ranger les scripts).
+2. Activez-la dans Safari : Réglages → Safari → Extensions → **Userscripts**, en l'autorisant sur tous les sites
+   (le chemin exact change un peu selon la version d'iOS).
+3. Dans Safari, ouvrez le lien d'installation du script ci-dessus, touchez l'icône d'extensions (« Aa ») →
+   **Userscripts** → installer.
+4. Ouvrez les réseaux **dans Safari** (pas dans l'application).
+
+### La pastille
+
+Une petite pastille bleue 🛡 apparaît sur le bord gauche de l'écran, avec le nombre de pubs masquées : c'est la preuve
+que ça marche. **Touchez-la pour mettre en pause** (elle devient grise ⏸), touchez-la encore pour relancer.
+La pause est retenue pour ce site (`www.facebook.com` et `m.facebook.com` comptent comme deux sites).
+
+### Ce qui diffère de l'ordinateur
+
+- **Aucun blocage des requêtes de pub** : un script ne peut que masquer. L'option « requêtes de pub » n'existe que
+  dans l'extension.
+- **Les sites mobiles ont une autre structure que les sites pour ordinateur** (par exemple `m.facebook.com`), et les
+  règles de `sites.js` ont été écrites pour la version ordinateur. Si des pubs passent sur Facebook, demandez la
+  **version pour ordinateur** du site (Firefox : menu ⋮ → « Version pour ordinateur »). La pastille y est alors toute petite.
+- **Les applications gardent leurs pubs.** Pour limiter celles qui viennent de régies externes, même dans les
+  applications, vous pouvez régler un DNS privé de blocage de pubs (Android : Réglages → Réseau → DNS privé →
+  `dns.adguard-dns.com`). Cela ne retire pas les posts sponsorisés que Facebook ou Instagram insèrent eux-mêmes dans
+  le fil.
+- **Testé sur un téléphone Android simulé** (écran tactile, maquettes des réseaux), **pas sur un vrai téléphone** ni
+  sur iPhone : les étapes d'installation ci-dessus suivent le fonctionnement habituel de ces outils, mais elles n'ont
+  pas été essayées de bout en bout.
+
 ## Quand une pub repasse
 
 Tous les réglages propres à chaque réseau sont dans **`sites.js`** (le mode d'emploi est en tête du fichier).
@@ -71,6 +122,7 @@ Tous les réglages propres à chaque réseau sont dans **`sites.js`** (le mode d
 2. Ajoutez son sélecteur dans `sites.js` : dans `css` s'il s'agit d'une pub à coup sûr,
    ou dans `items` s'il faut d'abord vérifier la mention « Sponsorisé ».
 3. Revenez sur la page `chrome://extensions` et cliquez sur la flèche circulaire de l'extension, puis rechargez le réseau.
+4. Pour la version téléphone, régénérez le script : `node tools/build-userscript.js`, puis réinstallez-le.
 
 ## Comment ça marche
 
@@ -79,8 +131,11 @@ Tous les réglages propres à chaque réseau sont dans **`sites.js`** (le mode d
 - `engine.js` tourne dans la page : il cherche les posts, lit la mention « Sponsorisé » (accents, majuscules,
   lettres éclatées, plusieurs langues) et masque ce qui est une pub. Il surveille la page, donc il masque aussi les
   pubs qui arrivent pendant que vous faites défiler.
+- `content.js` branche le moteur sur l'extension (réglages et compteur).
 - `background.js` compte les pubs masquées et bloque les requêtes vers les régies publicitaires.
 - `popup.html` / `popup.css` / `popup.js` : la fenêtre de l'extension.
+- `telephone/` : la version téléphone (`bridge.js` = la pastille, et le fichier `.user.js` généré par
+  `tools/build-userscript.js` à partir de `sites.js`, `engine.js` et `bridge.js`).
 - `icons/`, `tools/make_icons.py` : les icônes et le script qui les dessine.
 
 Les pubs sont **masquées** (`display: none`), pas supprimées : en désactivant l'extension, tout revient.
@@ -93,6 +148,6 @@ publicitaires sont bloquées et que les pubs vidéo YouTube sont sautées.
 
 ```bash
 npm install --no-save playwright && npx playwright install chromium   # une seule fois
-node bloqueur-pub-reseaux-sociaux/tests/run.js
-# sur un serveur sans écran : xvfb-run -a node bloqueur-pub-reseaux-sociaux/tests/run.js
+node bloqueur-pub-reseaux-sociaux/tests/run.js              # l'extension
+node bloqueur-pub-reseaux-sociaux/tests/run-userscript.js   # la version téléphone (écran tactile simulé)
 ```
