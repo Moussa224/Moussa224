@@ -5,7 +5,7 @@ Une extension pour navigateur qui **masque les publicités et les posts sponsori
 Facebook · Instagram · X (Twitter) · YouTube · TikTok · LinkedIn · Reddit · Pinterest
 
 Elle fonctionne sur **ordinateur**, dans Google Chrome, Microsoft Edge, Brave et Opera.
-Pour le **téléphone**, une version « script » existe : voir [Sur téléphone](#sur-téléphone).
+Pour le **téléphone** (iPhone ou Android), une version « script » existe : voir [Sur téléphone](#sur-téléphone).
 Elle ne collecte rien et n'envoie rien nulle part : tout se passe dans votre navigateur.
 
 ## Installer (2 minutes)
@@ -75,22 +75,25 @@ Lien d'installation du script (à ouvrir **dans le navigateur indiqué ci-dessou
 `https://raw.githubusercontent.com/Moussa224/Moussa224/claude/awesome-cray-s6pyhi/bloqueur-pub-reseaux-sociaux/telephone/bloqueur-pub-reseaux-sociaux.user.js`
 (quand la branche sera fusionnée, remplacez `claude/awesome-cray-s6pyhi` par `master`).
 
+### iPhone : Safari + Userscripts
+
+1. Installez l'application gratuite **Userscripts** depuis l'App Store et ouvrez-la une fois : elle demande un
+   dossier où ranger ses scripts, choisissez-en un.
+2. Activez-la dans Safari : Réglages → Safari → Extensions → **Userscripts**, et autorisez-la sur **tous les sites**
+   (le chemin exact change un peu selon la version d'iOS). iOS 16.4 ou plus récent est recommandé.
+3. Dans **Safari**, ouvrez le lien d'installation du script ci-dessus, touchez **Aa** dans la barre d'adresse →
+   **Userscripts** → **Installer**.
+4. Utilisez ensuite les réseaux **dans Safari** :
+   - tapez l'adresse vous-même (`facebook.com`, `instagram.com`, `x.com`…) ou passez par un favori : un lien ouvert
+     depuis une autre application ou un message lance souvent l'application à la place ;
+   - n'utilisez pas un raccourci « Sur l'écran d'accueil » : les extensions de Safari n'y fonctionnent normalement pas.
+
 ### Android : Firefox + Violentmonkey
 
 1. Installez **Firefox** depuis le Play Store.
 2. Dans Firefox : menu ⋮ → **Modules complémentaires** → installez **Violentmonkey** (ou Tampermonkey).
 3. Toujours dans Firefox, ouvrez le lien d'installation du script ci-dessus. Violentmonkey propose de l'installer : confirmez.
 4. Ouvrez Facebook, Instagram, etc. **dans Firefox** (pas dans l'application).
-
-### iPhone : Safari + Userscripts
-
-1. Installez l'application gratuite **Userscripts** depuis l'App Store et ouvrez-la une fois (elle demande un dossier
-   où ranger les scripts).
-2. Activez-la dans Safari : Réglages → Safari → Extensions → **Userscripts**, en l'autorisant sur tous les sites
-   (le chemin exact change un peu selon la version d'iOS).
-3. Dans Safari, ouvrez le lien d'installation du script ci-dessus, touchez l'icône d'extensions (« Aa ») →
-   **Userscripts** → installer.
-4. Ouvrez les réseaux **dans Safari** (pas dans l'application).
 
 ### La pastille
 
@@ -104,14 +107,18 @@ La pause est retenue pour ce site (`www.facebook.com` et `m.facebook.com` compte
   dans l'extension.
 - **Les sites mobiles ont une autre structure que les sites pour ordinateur** (par exemple `m.facebook.com`), et les
   règles de `sites.js` ont été écrites pour la version ordinateur. Si des pubs passent sur Facebook, demandez la
-  **version pour ordinateur** du site (Firefox : menu ⋮ → « Version pour ordinateur »). La pastille y est alors toute petite.
+  **version pour ordinateur** du site (Safari : **Aa** → « Demander le site web pour ordinateur » ; Firefox : menu ⋮ →
+  « Version pour ordinateur »). La pastille y est alors toute petite.
 - **Les applications gardent leurs pubs.** Pour limiter celles qui viennent de régies externes, même dans les
-  applications, vous pouvez régler un DNS privé de blocage de pubs (Android : Réglages → Réseau → DNS privé →
-  `dns.adguard-dns.com`). Cela ne retire pas les posts sponsorisés que Facebook ou Instagram insèrent eux-mêmes dans
+  applications, vous pouvez régler un DNS de blocage de pubs (Android : Réglages → Réseau → DNS privé →
+  `dns.adguard-dns.com` ; iPhone : un profil DNS de blocage de pubs, comme ceux proposés par AdGuard DNS). Cela ne retire pas les posts sponsorisés que Facebook ou Instagram insèrent eux-mêmes dans
   le fil.
-- **Testé sur un téléphone Android simulé** (écran tactile, maquettes des réseaux), **pas sur un vrai téléphone** ni
-  sur iPhone : les étapes d'installation ci-dessus suivent le fonctionnement habituel de ces outils, mais elles n'ont
-  pas été essayées de bout en bout.
+- **Ce qui a été testé, et ce qui ne l'a pas été.** Le script a été testé dans Chromium en mode téléphone (écran
+  tactile, maquettes des réseaux), y compris dans le mode d'injection « extension » que l'application Userscripts
+  utilise sur iPhone. Il n'a **pas** été essayé avec le moteur de Safari ni sur un vrai iPhone ou un vrai téléphone
+  Android : les étapes d'installation ci-dessus suivent le fonctionnement habituel de ces outils, sans avoir été
+  essayées de bout en bout. Le code n'utilise pas de fonction plus récente que iOS 15.4 ; une fonction plus récente
+  (iOS 16.4) améliore la pastille quand elle est disponible.
 
 ## Quand une pub repasse
 

@@ -31,6 +31,9 @@ function build() {
     '// @run-at       document-start',
     '// @noframes',
     '// @grant        none',
+    // S'exécute à côté de la page et non dans la page : la sécurité stricte (CSP) de Facebook, etc. ne peut
+    // pas le bloquer. Le moteur n'a besoin que de la page affichée, pas de ses scripts.
+    '// @inject-into  content',
     '// ==/UserScript==',
   ].join('\n');
 

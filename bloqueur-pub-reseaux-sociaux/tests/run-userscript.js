@@ -6,6 +6,7 @@
  */
 const { chromium, devices } = require('playwright');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { mocks } = require('./mocks');
 const { build, OUTPUT } = require('../tools/build-userscript');
@@ -21,6 +22,7 @@ async function main() {
   const shipped = fs.readFileSync(OUTPUT, 'utf8');
   check('le userscript livré est à jour (node tools/build-userscript.js)', shipped === build());
   check('en-tête : @match pour chaque réseau', (shipped.match(/^\/\/ @match /gm) || []).length === 10);
+  check('en-tête : @inject-into content (à l\'abri de la CSP des sites)', /^\/\/ @inject-into\s+content$/m.test(shipped));
 
   const browser = await chromium.launch({ channel: 'chromium', headless: true });
   const ctx = await browser.newContext({ ...devices['Pixel 7'] });
@@ -128,6 +130,49 @@ async function main() {
   }
 
   await browser.close();
+
+  // 9. Mode « content » : le script tourne dans le monde isolé d'une extension, comme le fait l'app Userscripts
+  //    de Safari avec @inject-into content. On le simule avec une mini-extension qui charge le même fichier.
+  {
+    const extDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bpr-content-ext-'));
+    const matches = [...shipped.matchAll(/^\/\/ @match\s+(\S+)/gm)].map((m) => m[1]);
+    fs.writeFileSync(
+      path.join(extDir, 'manifest.json'),
+      JSON.stringify({ manifest_version: 3, name: 'test', version: '1', content_scripts: [{ matches, js: ['script.js'], run_at: 'document_start' }] })
+    );
+    fs.writeFileSync(path.join(extDir, 'script.js'), shipped);
+    const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'bpr-content-profile-'));
+    const cctx = await chromium.launchPersistentContext(profile, {
+      channel: 'chromium',
+      headless: true,
+      ...devices['Pixel 7'],
+      args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`],
+    });
+    await serveMocks(cctx);
+    for (const name of Object.keys(mocks)) {
+      const page = await openMock(cctx, name);
+      const list = await settle(page);
+      check(`mode content, ${name} : pubs masquées, vrais posts intacts`, allCorrect(list), describeBad(list));
+      await page.close();
+    }
+    const page = await openMock(cctx, 'instagram');
+    await settle(page);
+    await sleep(300);
+    check('mode content : la pastille compte 2 pubs', (await pillLabel(page)).includes('2 pubs masquées'), await pillLabel(page));
+    await pill(page).tap();
+    await sleep(300);
+    check('mode content : toucher la pastille met en pause', (await posts(page)).every((p) => p.visible));
+    await pill(page).tap();
+    const list = await settle(page);
+    check('mode content : toucher de nouveau relance le blocage', allCorrect(list), describeBad(list));
+    await page.close();
+    const csp = await openMock(cctx, 'facebook', { path: 'csp' });
+    check('mode content, CSP stricte : pubs masquées', allCorrect(await settle(csp)));
+    await cctx.close();
+    fs.rmSync(extDir, { recursive: true, force: true });
+    fs.rmSync(profile, { recursive: true, force: true });
+  }
+
   process.exit(finish());
 }
 

@@ -16,6 +16,7 @@
 // @run-at       document-start
 // @noframes
 // @grant        none
+// @inject-into  content
 // ==/UserScript==
 
 (function () {
@@ -500,7 +501,8 @@ const BPR_PAUSE_KEY = 'bpr-paused';
 
   const css =
     ':host{all:initial}' +
-    'button{position:fixed;left:0;top:42%;z-index:2147483647;width:38px;height:46px;padding:0;border:0;' +
+    'button{position:fixed;left:env(safe-area-inset-left,0px);top:42%;z-index:2147483647;width:38px;height:46px;' +
+    'padding:0;border:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;' +
     'border-radius:0 23px 23px 0;background:#2563eb;color:#fff;opacity:.7;cursor:pointer;touch-action:manipulation;' +
     'font:700 12px/1.15 system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;' +
     'justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.35)}' +
