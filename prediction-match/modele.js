@@ -126,7 +126,12 @@
     }
     const mu = (basMu + hautMu) / 2;
     const part = partPour(mu);
-    return { lamA: mu * part, lamB: mu * (1 - part), cible };
+    const forces = { lamA: mu * part, lamB: mu * (1 - part) };
+    // Contrôle : le modèle ne peut pas reproduire des cotes irréalistes (par exemple un nul à 9 % entre
+    // deux équipes équilibrées). `ecart` est le plus grand écart restant sur les trois probabilités.
+    const obtenu = probasInitiales(forces);
+    const ecart = Math.max(Math.abs(obtenu.pA - cible.pA), Math.abs(obtenu.pN - cible.pN), Math.abs(obtenu.pB - cible.pB));
+    return { ...forces, cible, ecart };
   }
 
   const LIBELLES_NIVEAU = [

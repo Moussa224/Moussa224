@@ -68,11 +68,46 @@ L'écart moyen entre annoncé et observé est de **0,69 point**. Le seul écart 
 
 **Valeur du niveau des équipes selon le moment du match.** Le log-loss avec le niveau des équipes connu, comparé à des équipes supposées égales : 0,973 contre 1,029 à la 10e minute, 0,794 contre 0,814 à la 45e, 0,583 contre 0,592 à la 70e, 0,323 contre 0,324 à la 85e. Après la 70e minute, le score et le temps restant décident presque tout ; le niveau d'avant-match ne compte vraiment que dans la première heure.
 
+## Test hors période : 498 matchs de 2020 à 2024
+
+Le modèle, réglé sur 2015/16, est évalué sur des matchs plus récents qu'il n'a jamais vus (`evaluer-recents.js`) : Euro 2020 et 2024, Coupe du monde 2022, CAN 2023, Copa América 2024, Bundesliga 2023/24 (matchs du Bayer Leverkusen), Ligue 1 2021/22 et 2022/23 (matchs du PSG), Liga 2020/21 (matchs du FC Barcelone), Indian Super League 2021/22. Le score pris en compte est celui du temps réglementaire.
+
+Ces matchs n'ont pas de niveau d'avant-match connu : les équipes sont supposées égales. Les prévisions du début de match y sont donc forcément moins bonnes, et seule la seconde période est évaluée.
+
+| | 2015/16 (4 championnats) | 2020 à 2024 (498 matchs) |
+|---|---|---|
+| Buts par match | 2,63 | 2,81 |
+| Arrêts de jeu moyens, 2e période | 3,8 min | 5,4 min (4,0 à 7,4 selon la compétition) |
+| Cartons rouges par match | 0,27 | 0,05 à 0,25 selon la compétition |
+
+**Fiabilité** (réglage par défaut des arrêts de jeu : 5 minutes ; prévisions des minutes 60 à 85, les trois issues). Quand le modèle annonce X %, voici combien de fois l'issue est arrivée :
+
+| Annoncé | 2 % | 15 % | 24 % | 67 % | 75 % | 85 % | 98 % |
+|---|---|---|---|---|---|---|---|
+| Observé | 2,1 % | 14,0 % | 21,3 % | 66,7 % | 76,9 % | 84,4 % | 97,0 % |
+
+Les prévisions à 80 % ou plus se sont réalisées 916 fois sur 992 (92,3 %), annoncées en moyenne à 93,1 %. Entre 33 % et 55 %, les écarts sont plus grands (observé plus haut que l'annoncé), sur peu de prévisions (57 à 190 par case) et avec des équipes supposées égales : ce test ne permet pas de conclure sur cette zone.
+
+**Le temps additionnel compte.** Log-loss en seconde période selon le réglage des arrêts de jeu (plus petit = mieux) :
+
+| Réglage | 60' | 70' | 80' | 85' | 90' |
+|---|---|---|---|---|---|
+| 3,8 min (valeur de 2015/16) | 0,6643 | 0,5577 | 0,4731 | 0,4012 | 0,2970 |
+| 5 min (valeur par défaut) | 0,6653 | 0,5592 | 0,4727 | 0,3985 | 0,2889 |
+| Moyenne de la compétition | 0,6664 | 0,5603 | 0,4725 | 0,3989 | 0,2885 |
+| Temps réellement joué | 0,6639 | 0,5561 | 0,4661 | 0,3899 | 0,2722 |
+
+Connaître le temps additionnel annoncé fait gagner jusqu'à 0,017 de log-loss à la 90e minute, soit plus que n'importe quel autre réglage. L'application permet de le saisir.
+
+## Robustesse de l'outil de calage sur les cotes
+
+Un balayage de cotes (`prediction-match/test-modele.js`) montre que le calage reproduit les cotes à moins d'un point près sur toute la plage réaliste (nul entre 20 et 32 %). Un balayage aléatoire fait pendant la mise au point a montré qu'il échoue sur des cotes qu'aucun vrai match ne produit, par exemple un nul à 9 % entre deux équipes équilibrées : le modèle ne descend pas sous 15 % de nuls environ pour des équipes proches. L'application mesure cet écart. Au-delà de 1,5 point elle avertit ; au-delà de 3 points elle refuse les cotes et revient au niveau Elo, avec un message qui demande de vérifier l'ordre victoire A / nul / victoire B.
+
 ## Limites de cette validation
 
 - **Pas de comparaison avec le marché.** Ces données ne contiennent pas les cotes en direct. On sait que les probabilités sont bien calibrées, pas qu'elles battent un bookmaker. Les bookmakers intègrent la composition, les blessures, la tactique et le flux d'argent ; leur marge (souvent 5 % ou plus) s'ajoute. Un modèle bien calibré ne suffit pas à gagner de l'argent.
 - **L'avant-match vient d'un modèle maison.** La fiabilité réelle de l'outil dépend de la qualité du niveau des équipes saisi. Des cotes de bookmaker donnent en principe un meilleur avant-match, mais cela n'a pas été testé ici.
-- **Un seul exercice, un seul type de championnat.** Saison 2015/16, quatre championnats européens. Les arrêts de jeu sont plus longs aujourd'hui (4 à 7 minutes en 2e période d'après les matchs récents de la même source) : l'application les règle, mais les effets du jeu moderne n'ont pas été remesurés.
+- **Réglages mesurés sur 2015/16.** Quatre championnats européens. Le test sur 498 matchs de 2020 à 2024 est concluant en seconde période, mais les effets (cartons, score, tirs) n'ont pas été remesurés sur le jeu moderne, et le début de match n'y a pas pu être testé faute de niveau des équipes.
 - **Cartons rouges multiples non mesurés** (deux joueurs d'écart ou plus : trop peu de matchs). Les valeurs correspondantes sont prudentes mais non mesurées.
 - **Poids des tirs ajusté sur toutes les données**, puis fixé : le test croisé ne le réapprend pas à chaque moitié. Son effet sur la qualité des prévisions est modeste.
 - **La simulation de démonstration** de l'application utilise les mêmes hypothèses que le calcul : elle ne prouve rien sur la réalité.

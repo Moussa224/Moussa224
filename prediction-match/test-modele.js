@@ -254,3 +254,26 @@ test('plus de X buts : probabilités décroissantes, score actuel compris', () =
   const fini = M.prevoir(egaux, [{ t: 'but', eq: 'A', min: 10 }, { t: 'but', eq: 'A', min: 20 }, { t: 'but', eq: 'B', min: 30 }], 90, true);
   assert.deepEqual(fini.plusDe.slice(0, 5), [1, 1, 1, 1, 0]);
 });
+
+test('cotes réalistes : le modèle les reproduit à moins d\'un point près, sur toute la plage', () => {
+  let n = 0;
+  for (const pN of [0.2, 0.24, 0.28, 0.32]) {
+    for (let pA = 0.06; pA < 0.92 - pN; pA += 0.07) {
+      const pB = 1 - pN - pA;
+      if (pB < 0.04) continue;
+      const marge = 1.05;
+      const cotes = [marge / pA, marge / pN, marge / pB].map((c) => Math.round(c * 100) / 100);
+      const f = M.forcesDepuisCotes(...cotes);
+      assert.ok(f.ecart < 0.01, `cotes ${cotes} : écart ${f.ecart}`);
+      n++;
+    }
+  }
+  assert.ok(n > 20);
+});
+
+test('des cotes irréalistes sont signalées par un grand écart', () => {
+  const f = M.forcesDepuisCotes(2.35, 10.49, 2.52); // nul à 9 % entre deux équipes équilibrées
+  assert.ok(f.ecart > 0.03, `écart ${f.ecart}`);
+  const g = M.forcesDepuisCotes(1.9, 9, 3.5);
+  assert.ok(g.ecart > 0.03);
+});

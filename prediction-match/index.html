@@ -22,6 +22,7 @@
     </header>
 
     <div id="bandeau" class="bandeau" role="status" hidden></div>
+    <div id="erreur" class="bandeau bandeau--erreur" role="alert" hidden></div>
 
     <!-- ============ Match en cours et prévision ============ -->
     <section class="carte" aria-label="Match en cours">
@@ -242,11 +243,12 @@
           </table>
         </div>
         <p>L'écart moyen entre annoncé et observé est de 0,7 point. Le niveau des équipes compte surtout en première mi-temps : après la 70e minute, le score et le temps restant décident presque tout.</p>
+        <p><strong>Test sur des matchs récents.</strong> Le modèle a aussi été essayé sur 498 matchs de 2020 à 2024 (Euro 2020 et 2024, Coupe du monde 2022, CAN 2023, Copa América 2024, Bundesliga, Ligue 1, Liga, Indian Super League), jamais utilisés pour le régler. En seconde période, les prévisions à 80 % ou plus se sont réalisées 92,3 % du temps, pour 93,1 % annoncé. <strong>Le temps additionnel compte beaucoup</strong> : le connaître réduit nettement l'erreur à la 85e et à la 90e minute, d'où le réglage « Arrêts de jeu en 2e période ».</p>
         <p><strong>Ce qui n'a pas été vérifié.</strong></p>
         <ul>
-          <li>Ces mesures supposent un bon niveau d'avant-match. Avec des cotes de bookmaker, il sera meilleur que mon estimation de test ; avec un niveau Elo saisi à la main, cela dépend de votre estimation.</li>
+          <li>Ces mesures supposent un bon niveau d'avant-match. Avec des cotes de bookmaker, il sera meilleur que mon estimation de test ; avec un niveau Elo saisi à la main, cela dépend de votre estimation. Sur les matchs récents, le début de match n'a pas pu être testé, faute de niveau des équipes.</li>
           <li>Je n'ai pas pu comparer le modèle aux cotes en direct des bookmakers, qui intègrent beaucoup d'informations : on ne sait donc pas s'il aurait gagné de l'argent. Face à un marché efficace, la marge du bookmaker (souvent 5 % ou plus) rend un pari rentable difficile.</li>
-          <li>Les réglages viennent de matchs de 2015/16. Les arrêts de jeu sont plus longs aujourd'hui (réglage prévu), et le jeu a pu évoluer.</li>
+          <li>Les réglages viennent de matchs de 2015/16 ; le test récent est rassurant mais il ne remplace pas une nouvelle mesure complète.</li>
           <li>L'effet de plusieurs cartons rouges d'écart n'est pas mesuré (trop peu de cas). Pas de blessures, de composition, de météo, de penalties ni de prolongations.</li>
         </ul>
         <p>Une chance de 80 % veut dire que l'autre issue arrive tout de même une fois sur cinq.</p>

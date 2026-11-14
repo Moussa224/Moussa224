@@ -106,13 +106,29 @@
     return S.mode === 'cotes' && cotesSaisies().every((c) => Number.isFinite(c) && c > 1);
   }
 
+  // Comment le niveau d'avant-match est obtenu : 'elo', 'incompletes', 'incoherentes', 'approx' ou 'ok' (cotes)
+  let statutCotes = 'elo';
+  let ecartCotes = 0;
+
   function forces() {
     let f = null;
-    if (cotesValides()) {
-      const cotes = cotesSaisies();
-      const cle = cotes.join('|');
-      if (cacheForces.cle !== cle) cacheForces = { cle, valeur: M.forcesDepuisCotes(...cotes) };
-      f = cacheForces.valeur;
+    statutCotes = 'elo';
+    if (S.mode === 'cotes') {
+      statutCotes = 'incompletes';
+      if (cotesValides()) {
+        const cotes = cotesSaisies();
+        const cle = cotes.join('|');
+        if (cacheForces.cle !== cle) cacheForces = { cle, valeur: M.forcesDepuisCotes(...cotes) };
+        const trouve = cacheForces.valeur;
+        ecartCotes = trouve ? trouve.ecart : 1;
+        // Des cotes qu'aucun vrai match ne produit (nul trop peu probable) ne sont pas utilisées.
+        if (trouve && trouve.ecart <= 0.03) {
+          f = trouve;
+          statutCotes = trouve.ecart > 0.015 ? 'approx' : 'ok';
+        } else {
+          statutCotes = 'incoherentes';
+        }
+      }
     }
     if (!f) f = M.forcesDepuisNiveaux({ niveauA: S.niveauA, niveauB: S.niveauB, terrain: S.terrain, butsMoyens: S.butsMoyens });
     return { ...f, arrets2: S.arrets2 };
@@ -146,6 +162,7 @@
 
   /** Pourcentage affiché. Tant que le match n'est pas fini, jamais 100 % ni 0 % : rien n'est certain. */
   function pct(p, fini) {
+    if (!Number.isFinite(p)) return '–';
     const n = Math.round(p * 100);
     if (fini) return `${n} %`;
     if (n >= 100) return '99 %';
@@ -158,6 +175,7 @@
   // ---------------------------------------------------------------------------
 
   function ajouter(t, eq) {
+    if (S.evenements.filter((v) => v.t === t && v.eq === eq).length >= 99) return;
     S.evenements.push({ t, eq, min: S.minute });
     sauver();
     rendre();
@@ -176,24 +194,56 @@
 
   function changerMinute(m) {
     S.minute = Math.min(MINUTE_MAX, Math.max(0, Math.round(m)));
+    if (departChrono) departChrono = { t0: Date.now(), m0: S.minute };
     sauver();
     rendre();
+  }
+
+  // Le chronomètre se fonde sur l'horloge, pas sur le nombre de tops : si le navigateur ralentit l'onglet
+  // (écran verrouillé, autre application), la minute rattrape son retard au retour.
+  let departChrono = null;
+  let veille = null;
+
+  async function garderEcranAllume() {
+    try {
+      if ('wakeLock' in navigator) veille = await navigator.wakeLock.request('screen');
+    } catch (_) {
+      /* refusé ou indisponible : sans conséquence */
+    }
+  }
+  function relacherEcran() {
+    try {
+      if (veille) veille.release();
+    } catch (_) {
+      /* déjà relâché */
+    }
+    veille = null;
   }
 
   function arreterChrono() {
     if (chrono) clearInterval(chrono);
     chrono = null;
+    departChrono = null;
+    relacherEcran();
   }
   function basculerChrono() {
     if (chrono) {
       arreterChrono();
     } else {
+      departChrono = { t0: Date.now(), m0: S.minute };
       chrono = setInterval(() => {
-        if (S.minute >= MINUTE_MAX) arreterChrono();
-        else S.minute += 1;
-        sauver();
-        rendre();
-      }, 60000);
+        const m = Math.min(MINUTE_MAX, departChrono.m0 + Math.floor((Date.now() - departChrono.t0) / 60000));
+        if (m !== S.minute) {
+          S.minute = m;
+          sauver();
+          rendre();
+        }
+        if (m >= MINUTE_MAX) {
+          arreterChrono();
+          rendre();
+        }
+      }, 1000);
+      garderEcranAllume();
     }
     rendre();
   }
@@ -440,6 +490,7 @@
       const plus = pas.querySelector('.plus');
       moins.disabled = !S.evenements.some((v) => v.t === t && v.eq === eq && v.min <= S.minute);
       moins.setAttribute('aria-label', `Retirer ${SINGULIER[t]} pour ${nomDe(eq)}`);
+      plus.disabled = n >= 99;
       plus.setAttribute('aria-label', `Ajouter ${SINGULIER[t]} pour ${nomDe(eq)} à la ${libMinute(S.minute)}`);
     });
   }
@@ -816,11 +867,15 @@
     $('val-niveau-b').textContent = `${S.niveauB} · ${M.libelleNiveau(S.niveauB)}`;
     $('val-buts-moyens').textContent = virgule(S.butsMoyens);
 
-    const utilise = cotesValides();
+    const utilise = statutCotes === 'ok' || statutCotes === 'approx';
     const alerte = $('alerte-cotes');
-    const saisieIncomplete = S.mode === 'cotes' && !utilise;
-    alerte.hidden = !saisieIncomplete;
-    if (saisieIncomplete) alerte.textContent = 'Saisissez les trois cotes (chacune supérieure à 1). En attendant, le niveau Elo est utilisé.';
+    const messages = {
+      incompletes: 'Saisissez les trois cotes (chacune supérieure à 1). En attendant, le niveau Elo est utilisé.',
+      incoherentes: "Ces trois cotes ne ressemblent à aucun vrai match (nul trop peu probable pour ces équipes). Vérifiez l'ordre victoire A / nul / victoire B. En attendant, le niveau Elo est utilisé.",
+      approx: `Le modèle reproduit ces cotes à ${virgule(ecartCotes * 100)} points près : vérifiez la saisie.`,
+    };
+    alerte.hidden = !messages[statutCotes];
+    alerte.textContent = messages[statutCotes] || '';
     ['cote-a', 'cote-n', 'cote-b'].forEach((id) => {
       const valeur = $(id).value.trim();
       $(id).setAttribute('aria-invalid', String(S.mode === 'cotes' && valeur !== '' && !(lireCote(valeur) > 1)));
@@ -889,7 +944,23 @@
   // Dessin complet
   // ---------------------------------------------------------------------------
 
+  function afficherErreur() {
+    const e = $('erreur');
+    e.textContent = 'Une erreur est survenue dans le calcul. Rechargez la page : votre match est conservé sur cet appareil.';
+    e.hidden = false;
+  }
+
   function rendre() {
+    try {
+      dessiner();
+      $('erreur').hidden = true;
+    } catch (erreur) {
+      console.error(erreur);
+      afficherErreur();
+    }
+  }
+
+  function dessiner() {
     const f = forces();
     const r = M.prevoir(f, S.evenements, S.minute, termine());
     rendreBandeau();
@@ -956,6 +1027,12 @@
       }).observe($('graphe-cadre'));
     }
   }
+
+  window.addEventListener('error', afficherErreur);
+  window.addEventListener('unhandledrejection', afficherErreur);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && chrono) garderEcranAllume();
+  });
 
   brancher();
   rendre();
