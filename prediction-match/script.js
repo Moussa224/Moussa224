@@ -9,6 +9,8 @@
   const $ = (id) => document.getElementById(id);
   const CLE_STOCKAGE = 'prediction-match-v1';
   const MINUTE_MAX = 100;
+  const MARCHES = ['A', 'N', 'B', 'AN', 'BN', 'AB', 'O', 'U'];
+  const LIGNES_BUTS = [0.5, 1.5, 2.5, 3.5, 4.5];
 
   // ---------------------------------------------------------------------------
   // État du match
@@ -21,6 +23,8 @@
       nomA: 'Équipe A', nomB: 'Équipe B',
       mode: 'elo', niveauA: 1760, niveauB: 1660, terrain: 'A', butsMoyens: 2.6,
       cotes: { A: '', N: '', B: '' },
+      arrets2: 5,
+      paris: { cotes: {}, prudence: 5, ligne: 2.5, capital: '' },
       minute: 63, fin: null, exemple: true,
       evenements: [
         e('cadre', 'A', 11), e('hors', 'B', 17), e('but', 'B', 23), e('cadre', 'A', 31), e('hors', 'A', 36),
@@ -47,6 +51,13 @@
       terrain: ['A', 'N', 'B'].includes(s.terrain) ? s.terrain : 'A',
       butsMoyens: nb(s.butsMoyens, 1.8, 3.6, 2.6),
       cotes: { A: String(s.cotes?.A ?? '').slice(0, 8), N: String(s.cotes?.N ?? '').slice(0, 8), B: String(s.cotes?.B ?? '').slice(0, 8) },
+      arrets2: Math.round(nb(s.arrets2, 2, 10, 5)),
+      paris: {
+        cotes: Object.fromEntries(MARCHES.map((id) => [id, String(s.paris?.cotes?.[id] ?? '').slice(0, 8)])),
+        prudence: Math.round(nb(s.paris?.prudence, 0, 12, 5)),
+        ligne: LIGNES_BUTS.includes(+s.paris?.ligne) ? +s.paris.ligne : 2.5,
+        capital: String(s.paris?.capital ?? '').slice(0, 14),
+      },
       minute: Math.round(nb(s.minute, 0, MINUTE_MAX, 0)),
       fin: s.fin === null || s.fin === undefined ? null : Math.round(nb(s.fin, 0, MINUTE_MAX, 0)),
       exemple: Boolean(s.exemple),
@@ -96,13 +107,15 @@
   }
 
   function forces() {
+    let f = null;
     if (cotesValides()) {
       const cotes = cotesSaisies();
       const cle = cotes.join('|');
       if (cacheForces.cle !== cle) cacheForces = { cle, valeur: M.forcesDepuisCotes(...cotes) };
-      if (cacheForces.valeur) return cacheForces.valeur;
+      f = cacheForces.valeur;
     }
-    return M.forcesDepuisNiveaux({ niveauA: S.niveauA, niveauB: S.niveauB, terrain: S.terrain, butsMoyens: S.butsMoyens });
+    if (!f) f = M.forcesDepuisNiveaux({ niveauA: S.niveauA, niveauB: S.niveauB, terrain: S.terrain, butsMoyens: S.butsMoyens });
+    return { ...f, arrets2: S.arrets2 };
   }
 
   // ---------------------------------------------------------------------------
@@ -206,7 +219,7 @@
 
   function nouveauMatch() {
     arreterChrono();
-    S = { ...S, minute: 0, fin: null, exemple: false, evenements: [] };
+    S = { ...S, minute: 0, fin: null, exemple: false, evenements: [], paris: { ...S.paris, cotes: {} } };
     curseur = null;
     sauver();
     rendre();
@@ -277,10 +290,16 @@
 
     const plusTard = S.evenements.filter((v) => v.min > S.minute).length;
     const note = $('note-relecture');
-    note.hidden = plusTard === 0;
+    let texteNote = '';
     if (plusTard > 0) {
-      note.textContent = `Relecture : ${plusTard} événement${plusTard > 1 ? 's' : ''} survenu${plusTard > 1 ? 's' : ''} plus tard ${plusTard > 1 ? 'sont masqués' : 'est masqué'} à cette minute.`;
+      texteNote = `Relecture : ${plusTard} événement${plusTard > 1 ? 's' : ''} survenu${plusTard > 1 ? 's' : ''} plus tard ${plusTard > 1 ? 'sont masqués' : 'est masqué'} à cette minute.`;
+    } else if (S.minute === 45) {
+      texteNote = "À 45', la 1re période est considérée comme terminée, arrêts de jeu compris.";
+    } else if (S.minute >= 90) {
+      texteNote = `Arrêts de jeu : le calcul suppose ${S.arrets2} minutes annoncées (réglage dans « Niveau des équipes et réglages »).`;
     }
+    note.hidden = texteNote === '';
+    note.textContent = texteNote;
 
     const btnChrono = $('chrono');
     btnChrono.setAttribute('aria-pressed', String(Boolean(chrono)));
@@ -364,8 +383,8 @@
 
   const LIGNES = [
     { t: 'but', cle: 'buts', libelle: 'Buts' },
-    { t: 'cadre', cle: 'cadres', libelle: 'Tirs cadrés' },
-    { t: 'hors', cle: 'hors', libelle: 'Tirs non cadrés' },
+    { t: 'cadre', cle: 'cadres', libelle: 'Tirs cadrés', aide: 'buts compris' },
+    { t: 'hors', cle: 'hors', libelle: 'Tirs non cadrés', aide: 'contrés compris' },
     { t: 'rouge', cle: 'rouges', libelle: 'Cartons rouges' },
   ];
   const SINGULIER = { but: 'un but', cadre: 'un tir cadré', hors: 'un tir non cadré', rouge: 'un carton rouge' };
@@ -381,6 +400,7 @@
     grille.replaceChildren(html('div'), tete('A'), tete('B'));
     for (const ligne of LIGNES) {
       const lib = html('div', 'libelle', ligne.libelle);
+      if (ligne.aide) lib.append(html('small', '', ligne.aide));
       grille.append(lib);
       for (const eq of ['A', 'B']) {
         const pas = html('div', 'pas');
@@ -572,6 +592,143 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Comparaison avec les cotes en direct
+  // ---------------------------------------------------------------------------
+
+  const ICONES_VERDICT = {
+    valeur: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    aucune: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    suspect: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.2L14.4 13H1.6z M8 6.4v3.2 M8 11.3v.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+  const TEXTE_VERDICT = { valeur: 'Valeur possible', aucune: 'Pas de valeur', suspect: 'Écart suspect', vide: 'Entrez une cote' };
+
+  /** Les issues sur lesquelles on peut comparer une cote, avec la probabilité du modèle. */
+  function marches(r) {
+    const L = S.paris.ligne;
+    const plus = r.plusDe[Math.ceil(L)];
+    return [
+      { id: 'A', nom: `${nomA()} gagne`, p: r.pA, cle: 'a' },
+      { id: 'N', nom: 'Match nul', p: r.pN, cle: 'n' },
+      { id: 'B', nom: `${nomB()} gagne`, p: r.pB, cle: 'b' },
+      { id: 'AN', nom: `${nomA()} ou nul`, p: r.pA + r.pN, cle: 'a' },
+      { id: 'BN', nom: `${nomB()} ou nul`, p: r.pB + r.pN, cle: 'b' },
+      { id: 'AB', nom: 'Pas de match nul', p: r.pA + r.pB, cle: 'n' },
+      { id: 'O', nom: `Plus de ${virgule(L)} buts`, p: plus, cle: 'n' },
+      { id: 'U', nom: `Moins de ${virgule(L)} buts`, p: 1 - plus, cle: 'n' },
+    ];
+  }
+
+  function construireParis() {
+    const liste = $('liste-paris');
+    liste.replaceChildren(
+      ...MARCHES.map((id) => {
+        const li = html('li', 'pari');
+        li.dataset.id = id;
+        const tete = html('div', 'pari-tete');
+        tete.append(html('span', 'cle'), html('span', 'pari-nom'), html('span', 'pari-proba'));
+        const corps = html('div', 'pari-corps');
+        const etiquette = html('label', 'pari-cote');
+        const champ = html('input', 'saisie');
+        champ.id = `cote-${id}`;
+        champ.type = 'text';
+        champ.inputMode = 'decimal';
+        champ.autocomplete = 'off';
+        champ.placeholder = 'Cote';
+        champ.setAttribute('aria-label', 'Cote proposée');
+        etiquette.append(champ);
+        corps.append(etiquette, html('span', 'pari-min'), html('span', 'verdict'));
+        li.append(tete, corps, html('p', 'pari-detail'));
+        champ.addEventListener('input', (e) => {
+          S.paris.cotes[id] = e.target.value;
+          sauver();
+          rendre();
+        });
+        return li;
+      })
+    );
+  }
+
+  const montant = (x) => Math.round(x).toLocaleString('fr-FR');
+
+  function rendreParis(r) {
+    const fini = termine();
+    const prudence = S.paris.prudence / 100;
+    $('val-prudence').textContent = `${S.paris.prudence} point${S.paris.prudence > 1 ? 's' : ''}`;
+    const remplirChamp = (el, valeur) => {
+      if (document.activeElement !== el && el.value !== String(valeur)) el.value = valeur;
+    };
+    remplirChamp($('prudence'), S.paris.prudence);
+    remplirChamp($('ligne-buts'), S.paris.ligne);
+    remplirChamp($('capital'), S.paris.capital);
+    const capital = parseFloat(String(S.paris.capital).replace(/\s/g, '').replace(',', '.'));
+
+    $('liste-paris').hidden = fini;
+    const synthese = $('synthese-paris');
+    if (fini) {
+      synthese.textContent = 'Le match est terminé : il n\'y a plus rien à comparer.';
+      return;
+    }
+    let nbCotes = 0;
+    let nbValeur = 0;
+    let nbSuspect = 0;
+    for (const m of marches(r)) {
+      const li = $('liste-paris').querySelector(`[data-id="${m.id}"]`);
+      li.querySelector('.cle').className = `cle cle--${m.cle}`;
+      li.querySelector('.pari-nom').textContent = m.nom;
+      li.querySelector('.pari-proba').textContent = pct(m.p, false);
+      remplirChamp(li.querySelector('input'), S.paris.cotes[m.id] || '');
+
+      const prudente = m.p - prudence;
+      li.querySelector('.pari-min').textContent = prudente > 0.01 ? `Cote minimale ${virgule(1 / prudente, 2)}` : 'Aucune cote ne suffit';
+
+      const cote = lireCote(S.paris.cotes[m.id] || '');
+      const c = cote > 1 ? M.comparerCote(m.p, cote, prudence) : null;
+      let verdict = 'vide';
+      let detail = '';
+      if (c) {
+        nbCotes += 1;
+        if (c.esperancePrudente > 0) {
+          verdict = c.ecart > 0.12 ? 'suspect' : 'valeur';
+        } else {
+          verdict = 'aucune';
+        }
+        const gain = c.esperancePrudente * 100;
+        detail = `La cote correspond à ${pct(c.implicite, false)} de chances. Gain moyen attendu avec la marge de prudence : ${gain >= 0 ? '+' : '−'}${virgule(Math.abs(gain))} % de la mise.`;
+        if (verdict === 'valeur') {
+          nbValeur += 1;
+          detail += ` Mise indicative : ${virgule(c.miseConseillee * 100)} % du capital`;
+          detail += capital > 0 ? ` (environ ${montant(capital * c.miseConseillee)}).` : '.';
+        } else if (verdict === 'suspect') {
+          nbSuspect += 1;
+          detail += ' Le bookmaker est très loin du modèle : il sait peut-être quelque chose que le modèle ignore (blessure, composition, minute exacte). Vérifiez avant tout.';
+        }
+      }
+      const pastille = li.querySelector('.verdict');
+      pastille.className = `verdict verdict--${verdict}`;
+      pastille.innerHTML = (ICONES_VERDICT[verdict] || '') + `<span>${TEXTE_VERDICT[verdict]}</span>`;
+      const ligneDetail = li.querySelector('.pari-detail');
+      ligneDetail.textContent = detail;
+      ligneDetail.hidden = detail === '';
+    }
+
+    const cotes1X2 = ['A', 'N', 'B'].map((id) => lireCote(S.paris.cotes[id] || ''));
+    const marge = cotes1X2.every((x) => x > 1) ? cotes1X2.reduce((t, x) => t + 1 / x, 0) - 1 : null;
+    let texte;
+    if (nbCotes === 0) {
+      texte = 'Entrez une cote pour juger si elle paie assez. La « cote minimale » indique, pour chaque issue, la cote en dessous de laquelle le pari n\'est pas intéressant avec la marge de prudence choisie.';
+    } else if (nbValeur === 0 && nbSuspect === 0) {
+      texte = 'Aucune des cotes saisies ne montre de valeur avec cette marge de prudence. Ne pas parier est une décision valable.';
+    } else if (nbValeur === 0) {
+      texte = 'Une cote s\'écarte beaucoup du modèle : le plus probable est que le bookmaker sache quelque chose que le modèle ignore. Ne pas parier est une décision valable.';
+    } else {
+      texte = `${nbValeur} cote${nbValeur > 1 ? 's' : ''} à valeur possible. Avant de parier, vérifiez ce que le bookmaker pourrait savoir de plus (blessure, composition).`;
+    }
+    if (marge !== null && marge >= 0) texte += ` Marge du bookmaker sur le résultat : ${virgule(marge * 100)} %.`;
+    else if (marge !== null) texte += ' Les trois cotes du résultat sont inhabituellement généreuses (marge négative) : vérifiez-les.';
+    synthese.textContent = texte;
+  }
+
+  // ---------------------------------------------------------------------------
   // Affichage : détails de la prévision
   // ---------------------------------------------------------------------------
 
@@ -646,6 +803,8 @@
     mettre('niveau-b', S.niveauB);
     mettre('terrain', S.terrain);
     mettre('buts-moyens', S.butsMoyens);
+    mettre('arrets2', S.arrets2);
+    $('val-arrets2').textContent = `${S.arrets2} min`;
     mettre('cote-a', S.cotes.A);
     mettre('cote-n', S.cotes.N);
     mettre('cote-b', S.cotes.B);
@@ -718,6 +877,7 @@
     const enSimulation = Boolean(sim);
     $('zone-temps').inert = enSimulation;
     $('zone-evenements').inert = enSimulation;
+    $('zone-paris').inert = enSimulation;
     $('reglages').inert = enSimulation;
     $('btn-nouveau').disabled = enSimulation;
     $('btn-sifflet').disabled = enSimulation;
@@ -737,6 +897,7 @@
     rendrePrevision(r);
     rendreReglages(f);
     rendreEvenements(r);
+    rendreParis(r);
     rendreGraphe(f);
     rendreDetails(r);
     rendreActions();
@@ -748,6 +909,7 @@
 
   function brancher() {
     construireEvenements();
+    construireParis();
 
     $('nom-a').addEventListener('input', (e) => { S.nomA = e.target.value; sauver(); rendre(); });
     $('nom-b').addEventListener('input', (e) => { S.nomB = e.target.value; sauver(); rendre(); });
@@ -773,6 +935,10 @@
     lier('niveau-b', 'niveauB', Number);
     lier('terrain', 'terrain');
     lier('buts-moyens', 'butsMoyens', Number);
+    lier('arrets2', 'arrets2', Number);
+    $('prudence').addEventListener('input', (e) => { S.paris.prudence = Number(e.target.value); sauver(); rendre(); });
+    $('ligne-buts').addEventListener('input', (e) => { S.paris.ligne = Number(e.target.value); sauver(); rendre(); });
+    $('capital').addEventListener('input', (e) => { S.paris.capital = e.target.value; sauver(); rendre(); });
     for (const [id, cle] of [['cote-a', 'A'], ['cote-n', 'N'], ['cote-b', 'B']]) {
       $(id).addEventListener('input', (e) => { S.cotes[cle] = e.target.value; sauver(); rendre(); });
     }

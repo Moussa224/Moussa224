@@ -68,7 +68,7 @@
     <!-- ============ Niveau des équipes ============ -->
     <details class="carte reglages" id="reglages">
       <summary>
-        <h2 class="titre-bloc">Niveau des équipes</h2>
+        <h2 class="titre-bloc">Niveau des équipes et réglages</h2>
         <span class="resume" id="reglages-resume"></span>
       </summary>
       <div class="reglages-corps" id="zone-reglages">
@@ -125,6 +125,12 @@
           <p class="alerte" id="alerte-cotes" role="alert" hidden></p>
         </div>
 
+        <div class="champ">
+          <label class="champ-tete" for="arrets2"><span>Arrêts de jeu en 2e période</span><output id="val-arrets2" for="arrets2"></output></label>
+          <input id="arrets2" class="glissiere" type="range" min="2" max="10" step="1" value="5">
+          <span class="champ-aide">Matchs récents : 4 à 7 minutes. Mettez le temps additionnel annoncé par l'arbitre quand il l'est : cela compte beaucoup dans les dernières minutes.</span>
+        </div>
+
         <p class="avant-match" id="avant-match"></p>
       </div>
     </details>
@@ -134,7 +140,38 @@
       <h2 id="t-evts">Ce qui se passe sur le terrain</h2>
       <p class="sous-titre">Chaque ajout est enregistré à la minute affichée plus haut.</p>
       <div class="evenements-grille" id="evenements-grille"></div>
-      <p class="aide-evenements">Un but compte au moins comme un tir cadré : inutile de saisir les deux. Le bouton − retire le dernier ajout de la ligne.</p>
+      <p class="aide-evenements">Comptez les buts parmi les tirs cadrés, comme dans les applications de score : un but compte au moins comme un tir cadré. Les tirs contrés vont avec les tirs non cadrés. Le bouton − retire le dernier ajout de la ligne.</p>
+    </section>
+
+    <!-- ============ Comparaison avec les cotes en direct ============ -->
+    <section class="carte" aria-labelledby="t-paris" id="zone-paris">
+      <h2 id="t-paris">Comparer avec les cotes en direct</h2>
+      <p class="sous-titre">Saisissez la cote que propose le bookmaker maintenant, sur chaque issue qui vous intéresse. L'application dit si cette cote paie assez par rapport à la probabilité du modèle, avec une marge de prudence.</p>
+      <div class="grille-2 reglage-paris">
+        <div class="champ">
+          <label class="champ-tete" for="prudence"><span>Marge de prudence</span><output id="val-prudence" for="prudence"></output></label>
+          <input id="prudence" class="glissiere" type="range" min="0" max="12" step="1" value="5">
+          <span class="champ-aide">Points de probabilité retirés au modèle avant de juger une cote. Le modèle se trompe parfois : plus c'est haut, plus l'outil est exigeant.</span>
+        </div>
+        <div class="champ">
+          <label class="champ-tete" for="ligne-buts"><span>Ligne du nombre de buts</span></label>
+          <select id="ligne-buts" class="saisie">
+            <option value="0.5">0,5 (au moins 1 but)</option>
+            <option value="1.5">1,5 (au moins 2 buts)</option>
+            <option value="2.5">2,5 (au moins 3 buts)</option>
+            <option value="3.5">3,5 (au moins 4 buts)</option>
+            <option value="4.5">4,5 (au moins 5 buts)</option>
+          </select>
+        </div>
+        <div class="champ">
+          <label class="champ-tete" for="capital"><span>Capital réservé aux paris (facultatif)</span></label>
+          <input id="capital" class="saisie" type="text" inputmode="decimal" autocomplete="off" placeholder="par exemple 50 000">
+          <span class="champ-aide">Sert uniquement à convertir la mise indicative en montant.</span>
+        </div>
+      </div>
+      <ul class="paris" id="liste-paris"></ul>
+      <p class="synthese-paris" id="synthese-paris" role="status"></p>
+      <p class="avertissement">Aucune prévision ne garantit un gain : même avec un avantage réel, on perd souvent à court terme. Les bookmakers voient aussi ce que ce modèle ignore (blessures, compositions, tactique, minute exacte), donc un grand écart est plus souvent une erreur du modèle qu'une occasion. Ne jouez que ce que vous pouvez perdre. Réservé aux adultes ; si le jeu vous pèse, parlez-en à un proche ou à un service d'aide.</p>
     </section>
 
     <!-- ============ Graphique ============ -->
@@ -178,17 +215,41 @@
 
     <!-- ============ À propos ============ -->
     <details class="carte apropos">
-      <summary>Comment ça marche, et ce que ça ne sait pas faire</summary>
+      <summary>Fiabilité mesurée et limites</summary>
       <div class="apropos-corps">
-        <p>Chaque équipe marque selon un taux de buts par minute. Le taux de départ vient du niveau des équipes (Elo) ou des cotes que vous saisissez. Il est ensuite corrigé en direct, puis le reste du match est déroulé demi-minute par demi-minute en suivant toutes les suites possibles de buts.</p>
+        <p>Chaque équipe marque selon un taux de buts par minute. Le taux de départ vient du niveau des équipes (cotes ou Elo). Il est corrigé en direct, puis le reste du match est déroulé demi-minute par demi-minute en suivant toutes les suites possibles de buts.</p>
         <ul>
-          <li><strong>Le temps :</strong> il reste moins de buts à marquer quand le match avance. Les buts sont un peu plus fréquents en seconde période.</li>
-          <li><strong>Le score :</strong> l'équipe qui mène ralentit un peu, celle qui est menée pousse un peu.</li>
-          <li><strong>Les cartons rouges :</strong> l'équipe à dix marque environ 25 % de moins, l'équipe à onze environ 25 % de plus.</li>
-          <li><strong>Les tirs :</strong> beaucoup de tirs cadrés d'un côté laissent penser que cette équipe est meilleure que prévu. L'effet reste modéré, car un seul match apprend peu.</li>
+          <li><strong>Le temps :</strong> un peu plus de buts en fin de match qu'au début, et les arrêts de jeu.</li>
+          <li><strong>Le score :</strong> les deux équipes marquent un peu plus quand le score est ouvert, l'équipe menée un peu plus encore. L'idée reçue selon laquelle l'équipe qui mène ralentit n'apparaît pas dans les données.</li>
+          <li><strong>Les cartons rouges :</strong> le plus gros effet. L'équipe à dix marque environ 40 % de moins, l'équipe à onze environ 65 % de plus.</li>
+          <li><strong>Les tirs :</strong> chaque tir, cadré ou non, vaut environ 0,1 but d'indice sur le niveau du jour. Les buts déjà marqués n'apprennent rien de plus.</li>
         </ul>
-        <p><strong>Limites.</strong> Ces réglages sont des ordres de grandeur du football en général, pas des mesures sur votre championnat. L'application ne se connecte à aucun flux de scores : vous saisissez vous-même le niveau des équipes et ce qui se passe. Elle ne connaît ni les blessures, ni la météo, ni la composition des équipes, ni les penalties.</p>
-        <p>Une chance de 80 % veut dire que l'autre issue arrive tout de même une fois sur cinq. C'est un outil d'analyse, pas un conseil de pari.</p>
+        <p><strong>Ce qui a été vérifié.</strong> Ces réglages ont été mesurés sur 1 517 matchs réels (Premier League, Liga, Serie A, Ligue 1, 2015/16). Test croisé : réglages appris sur deux championnats, testés sur les deux autres. Quand le modèle annonce une issue à X %, voici combien de fois elle est arrivée (prévisions des minutes 30 à 85) :</p>
+        <div class="defile">
+          <table class="table-fiabilite">
+            <thead><tr><th>Annoncé</th><th>Observé</th></tr></thead>
+            <tbody>
+              <tr><td>15 %</td><td>14,5 %</td></tr>
+              <tr><td>25 %</td><td>25,8 %</td></tr>
+              <tr><td>35 %</td><td>35,8 %</td></tr>
+              <tr><td>45 %</td><td>44,1 %</td></tr>
+              <tr><td>55 %</td><td>55,0 %</td></tr>
+              <tr><td>65 %</td><td>66,1 %</td></tr>
+              <tr><td>75 %</td><td>72,7 %</td></tr>
+              <tr><td>85 %</td><td>84,4 %</td></tr>
+              <tr><td>97 %</td><td>96,0 %</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>L'écart moyen entre annoncé et observé est de 0,7 point. Le niveau des équipes compte surtout en première mi-temps : après la 70e minute, le score et le temps restant décident presque tout.</p>
+        <p><strong>Ce qui n'a pas été vérifié.</strong></p>
+        <ul>
+          <li>Ces mesures supposent un bon niveau d'avant-match. Avec des cotes de bookmaker, il sera meilleur que mon estimation de test ; avec un niveau Elo saisi à la main, cela dépend de votre estimation.</li>
+          <li>Je n'ai pas pu comparer le modèle aux cotes en direct des bookmakers, qui intègrent beaucoup d'informations : on ne sait donc pas s'il aurait gagné de l'argent. Face à un marché efficace, la marge du bookmaker (souvent 5 % ou plus) rend un pari rentable difficile.</li>
+          <li>Les réglages viennent de matchs de 2015/16. Les arrêts de jeu sont plus longs aujourd'hui (réglage prévu), et le jeu a pu évoluer.</li>
+          <li>L'effet de plusieurs cartons rouges d'écart n'est pas mesuré (trop peu de cas). Pas de blessures, de composition, de météo, de penalties ni de prolongations.</li>
+        </ul>
+        <p>Une chance de 80 % veut dire que l'autre issue arrive tout de même une fois sur cinq.</p>
       </div>
     </details>
   </main>

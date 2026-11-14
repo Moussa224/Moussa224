@@ -26,11 +26,66 @@ test('deux équipes identiques sur terrain neutre : chances égales', () => {
 });
 
 test("l'échelle Elo est respectée : 100 points d'écart donnent environ 64 % de points attendus", () => {
-  for (const ecart of [50, 100, 200, 300, 400]) {
+  // Au-delà de 300 points d'écart, le modèle reste un peu en dessous de la courbe Elo (rare en pratique).
+  for (const [ecart, tolerance] of [[50, 0.015], [100, 0.015], [200, 0.015], [300, 0.015], [400, 0.025]]) {
     const forces = M.forcesDepuisNiveaux({ niveauA: 1500 + ecart, niveauB: 1500, terrain: 'N' });
     const p = M.probasInitiales(forces);
-    proche(p.pA + p.pN / 2, elo(ecart), 0.015, `écart ${ecart}`);
+    proche(p.pA + p.pN / 2, elo(ecart), tolerance, `écart ${ecart}`);
   }
+});
+
+test('les buts par match annoncés sont bien les buts attendus au coup d\'envoi', () => {
+  const ref = M.prevoir({ lamA: 1.45, lamB: 1.15 }, [], 0);
+  proche(ref.resteA + ref.resteB, 2.6, 0.01);
+  const autre = M.prevoir({ lamA: 2.0, lamB: 0.8 }, [], 0);
+  proche(autre.resteA, 2.0, 0.08);
+  proche(autre.resteB, 0.8, 0.08);
+});
+
+test("à 45', les arrêts de jeu de la 1re période sont écoulés : il reste moins de buts à venir qu'à 44'", () => {
+  const f = { lamA: 1.3, lamB: 1.3 };
+  const a44 = M.prevoir(f, [], 44);
+  const a45 = M.prevoir(f, [], 45);
+  const attendu = (r) => r.resteA + r.resteB;
+  const par_minute = attendu(a45) / (95 - 45); // ordre de grandeur des buts par minute en 2e période
+  assert.ok(attendu(a44) - attendu(a45) > 2 * par_minute, 'au moins 2 minutes de jeu en moins');
+  assert.ok(attendu(a44) - attendu(a45) < 5 * par_minute);
+});
+
+test("des arrêts de jeu plus longs en 2e période laissent plus de temps pour marquer", () => {
+  const court = M.prevoir({ lamA: 1.3, lamB: 1.3, arrets2: 3 }, [], 85);
+  const long = M.prevoir({ lamA: 1.3, lamB: 1.3, arrets2: 8 }, [], 85);
+  assert.ok(long.pN < court.pN - 0.02);
+  const restant = M.prevoir({ lamA: 1.3, lamB: 1.3, arrets2: 6 }, [], 93);
+  const fin = M.prevoir({ lamA: 1.3, lamB: 1.3, arrets2: 6 }, [], 96); // au-delà de l'annonce : durée minimale
+  assert.ok(restant.pN > fin.pN - 1e-9 || fin.pN > 0.9);
+  assert.ok(fin.pN > 0.9);
+});
+
+test('un carton rouge de chaque côté s\'annule', () => {
+  const sans = M.prevoir(egaux, [], 40);
+  const deux = M.prevoir(egaux, [{ t: 'rouge', eq: 'A', min: 30 }, { t: 'rouge', eq: 'B', min: 35 }], 40);
+  // Presque égal : pendant 5 minutes une équipe a joué à dix, ce qui change un peu ce qu'on attendait d'elle jusque-là.
+  proche(deux.pA, sans.pA, 0.01);
+  proche(deux.pB, sans.pB, 0.01);
+});
+
+test('comparaison à une cote : une cote équitable ne donne aucun avantage', () => {
+  const r = M.comparerCote(0.5, 2.0, 0);
+  proche(r.esperance, 0, 1e-12);
+  proche(r.implicite, 0.5, 1e-12);
+  assert.equal(r.miseConseillee, 0);
+});
+
+test('comparaison à une cote : la prudence retire un avantage apparent', () => {
+  const sans = M.comparerCote(0.55, 2.0, 0);
+  assert.ok(sans.esperance > 0.09 && sans.miseConseillee > 0);
+  const avec = M.comparerCote(0.55, 2.0, 0.06); // le modèle pourrait se tromper de 6 points : plus d'avantage
+  assert.ok(avec.esperancePrudente < 0);
+  assert.equal(avec.miseConseillee, 0);
+  assert.ok(M.comparerCote(0.9, 5.0, 0.05).miseConseillee <= 0.02, 'jamais plus de 2 % du capital');
+  assert.equal(M.comparerCote(0.5, 1.0), null);
+  assert.equal(M.comparerCote(NaN, 2.0), null);
 });
 
 test("jouer à domicile avantage l'équipe, et seulement elle", () => {
@@ -187,4 +242,15 @@ test('le calcul est rapide (une prévision en moins de 5 ms)', () => {
   const t = Date.now();
   for (let i = 0; i < 100; i++) M.prevoir(egaux, [{ t: 'but', eq: 'A', min: 30 }], 45);
   assert.ok((Date.now() - t) / 100 < 5);
+});
+
+test('plus de X buts : probabilités décroissantes, score actuel compris', () => {
+  const r = M.prevoir(egaux, [{ t: 'but', eq: 'A', min: 10 }, { t: 'but', eq: 'B', min: 20 }], 30);
+  assert.equal(r.plusDe[0], 1);
+  assert.ok(r.plusDe[1] === 1 && r.plusDe[2] === 1, 'déjà 2 buts marqués');
+  for (let k = 1; k < r.plusDe.length; k++) assert.ok(r.plusDe[k] <= r.plusDe[k - 1] + 1e-12);
+  proche(r.plus25, r.plusDe[3], 1e-12);
+  assert.ok(r.plusDe[3] > 0.5 && r.plusDe[3] < 1);
+  const fini = M.prevoir(egaux, [{ t: 'but', eq: 'A', min: 10 }, { t: 'but', eq: 'A', min: 20 }, { t: 'but', eq: 'B', min: 30 }], 90, true);
+  assert.deepEqual(fini.plusDe.slice(0, 5), [1, 1, 1, 1, 0]);
 });

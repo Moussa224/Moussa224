@@ -2,16 +2,17 @@
  * Moteur de prédiction d'un match de football en cours de jeu.
  *
  * Principe : chaque équipe marque selon un « taux de buts » par minute. Ce taux part d'un
- * niveau d'avant-match (points Elo ou cotes des bookmakers), puis il est corrigé en direct par :
- *   - le moment du match (on marque un peu plus en fin de match qu'au début),
- *   - le score (l'équipe qui mène ralentit, celle qui est menée pousse),
- *   - les cartons rouges (10 contre 11),
- *   - les tirs cadrés et non cadrés (une équipe qui domine a probablement un meilleur niveau
- *     que prévu, mais on se méfie : l'avant-match garde un gros poids).
+ * niveau d'avant-match (cotes des bookmakers ou points Elo), puis il est corrigé en direct par :
+ *   - le moment du match (un peu plus de buts en fin de match qu'au début) et les arrêts de jeu,
+ *   - le score (un match n'est pas aussi fermé quand le score est déjà ouvert),
+ *   - les cartons rouges (le plus gros effet : 10 contre 11),
+ *   - les tirs (une équipe qui domine a probablement un meilleur niveau du jour que prévu).
  *
- * À chaque instant, on déroule le reste du match minute par minute (demi-minute exactement),
- * en suivant toutes les suites possibles de buts. On en tire la probabilité de victoire de
- * chaque équipe, de match nul, du prochain but, les scores finaux probables, etc.
+ * À chaque instant, on déroule le reste du match demi-minute par demi-minute, en suivant toutes
+ * les suites possibles de buts. On en tire la probabilité de victoire de chaque équipe, de match
+ * nul, du prochain but, les scores finaux probables, etc.
+ *
+ * Les réglages de la section PARAMS ont été mesurés sur 1 517 matchs réels (voir validation/).
  *
  * Ce fichier ne dépend de rien : il s'utilise dans la page web et dans Node (tests).
  */
@@ -22,49 +23,56 @@
   'use strict';
 
   // ---------------------------------------------------------------------------
-  // Réglages du modèle. Ce sont des ordres de grandeur issus de la littérature sur le football,
-  // pas des valeurs mesurées sur votre championnat.
+  // Réglages du modèle.
+  // « Mesuré » : estimé par régression de Poisson sur 1 517 matchs de Premier League, Liga,
+  // Serie A et Ligue 1 (saison 2015/16, données StatsBomb), voir validation/README.md.
   // ---------------------------------------------------------------------------
   const P = {
-    FIN: 94, // minute de fin attendue : 90 + environ 4 minutes d'arrêts de jeu
-    DUREE_MIN: 1.5, // temps restant minimal quand on a dépassé la minute de fin attendue
+    // Durée du match
+    ARRETS_1: 2.0, // arrêts de jeu de la 1re période, en minutes (matchs récents : 2 à 4)
+    ARRETS_2: 5.0, // arrêts de jeu attendus en 2e période (matchs récents : 4 à 7) ; réglable dans l'application
+    DUREE_MIN: 1.5, // temps restant minimal une fois les arrêts de jeu annoncés dépassés
     PAS: 0.5, // pas de calcul, en minutes
     PLAFOND: 10, // buts maximum pris en compte sur le reste du match, par équipe
 
-    BUTS_MOYENS: 2.6, // buts par match, les deux équipes ensemble
+    // Niveau d'avant-match
+    BUTS_MOYENS: 2.6, // buts par match, les deux équipes ensemble (mesuré : 2,63)
     AVANTAGE_DOMICILE: 75, // points Elo donnés à l'équipe qui joue chez elle
     // Part des buts d'A = logistique(PENTE_ELO × écart Elo / 400). Calibrée pour retrouver les chances
-    // Elo habituelles (100 points d'écart = 64 % de points attendus, victoire = 1, nul = 0,5) : voir test-modele.js.
+    // Elo habituelles (100 points d'écart = 64 % de points attendus, victoire = 1, nul = 0,5).
     PENTE_ELO: 2.0,
 
-    PENTE_TEMPS: 0.36, // les buts arrivent surtout en 2e mi-temps : 45 % avant, 55 % après
+    // Moment du match : intensité 1 + PENTE_TEMPS × (minute/90 − 0,5). Mesuré : 0,26 à 0,30.
+    PENTE_TEMPS: 0.28,
 
-    // Effet du score : par but d'écart (jusqu'à 3)
-    ECART_MENE: 0.05, // l'équipe qui mène marque 5 % de moins par but d'avance
-    ECART_MENEE: 0.07, // l'équipe menée marque 7 % de plus par but de retard
+    // Effet du score, par rapport à un match à égalité (mesuré). Indexé par l'écart, plafonné à 2.
+    // Les deux équipes marquent un peu plus quand le score est ouvert ; l'équipe menée un peu plus encore.
+    MENE: [1, 1.06, 1.07],
+    MENEE: [1, 1.08, 1.15],
 
-    // Effet d'un carton rouge, par carton (jusqu'à 3)
-    ROUGE_PROPRE: 0.75, // l'équipe à 10 marque 25 % de moins
-    ROUGE_ADVERSE: 1.25, // l'équipe à 11 marque 25 % de plus
+    // Effet des cartons rouges, selon l'écart net de cartons (mesuré : ×0,60 et ×1,70, légèrement ramenés vers 1).
+    // Au-delà d'un carton d'écart, très peu de matchs : valeurs prudentes, non mesurées.
+    ROUGE_PROPRE: [1, 0.62, 0.45], // l'équipe qui a des joueurs en moins
+    ROUGE_ADVERSE: [1, 1.65, 2.2], // l'équipe qui a des joueurs en plus
 
-    // Tirs : conversion en « buts attendus » (xG)
-    XG_CADRE: 0.3, // un tir cadré vaut en moyenne 0,30 but
-    XG_HORS: 0.03, // un tir non cadré vaut en moyenne 0,03 but
-    CONFIANCE_AVANT_MATCH: 10, // poids de l'avant-match, en « buts équivalents »
-    PERF_MIN: 0.65,
-    PERF_MAX: 1.5,
+    // Tirs. Chaque tir, cadré ou non, vaut environ 0,105 but d'« évidence » sur le niveau du jour
+    // (mesuré : les tirs non cadrés informent autant que les cadrés). CONFIANCE : poids de l'avant-match,
+    // en buts équivalents (mesuré : 4,5, pente de contrôle 1,00 ± 0,26).
+    POIDS_TIR: 0.105,
+    CONFIANCE: 4.5,
+    PERF_MIN: 0.6,
+    PERF_MAX: 1.7,
 
-    // Simulation
-    ROUGE_PAR_MATCH: 0.06, // cartons rouges par équipe et par match
-    HORS_PAR_CADRE: 2, // tirs non cadrés pour un tir cadré
-    DISPERSION_NIVEAU: 0.15, // le vrai niveau du jour s'écarte du niveau annoncé de ±15 %
+    // Simulation (démonstration)
+    ROUGE_PAR_MATCH: 0.1, // cartons rouges par équipe et par match (mesuré : 0,14 dans les 4 championnats)
+    TIRS_CADRES: 0.337, // part des tirs qui sont cadrés (mesuré : 33,7 %)
+    DISPERSION_NIVEAU: 0.2, // le vrai niveau du jour s'écarte du niveau annoncé de ±20 %
   };
 
   const bornes = (x, bas, haut) => Math.min(haut, Math.max(bas, x));
 
-  // Intensité des buts selon la minute : 1 en moyenne sur les 90 minutes.
+  // Intensité des buts selon la minute (1 au milieu du match).
   const intensite = (t) => 1 + P.PENTE_TEMPS * (Math.min(t, 90) / 90 - 0.5);
-  const NORME = 90 + (P.FIN - 90) * intensite(90); // intégrale de l'intensité du début à FIN
 
   // ---------------------------------------------------------------------------
   // Niveaux d'avant-match
@@ -147,34 +155,113 @@
     return e;
   }
 
-  const multEcart = (ecart) => {
-    const n = Math.min(Math.abs(ecart), 3);
-    if (ecart > 0) return 1 - P.ECART_MENE * n;
-    if (ecart < 0) return 1 + P.ECART_MENEE * n;
-    return 1;
+  const multScore = (ecart) => {
+    const n = Math.min(Math.abs(ecart), 2);
+    return ecart > 0 ? P.MENE[n] : ecart < 0 ? P.MENEE[n] : 1;
   };
-  const multRouges = (propres, adverses) =>
-    Math.pow(P.ROUGE_PROPRE, Math.min(propres, 3)) * Math.pow(P.ROUGE_ADVERSE, Math.min(adverses, 3));
+  const multRouges = (propres, adverses) => {
+    const net = propres - adverses;
+    const n = Math.min(Math.abs(net), 2);
+    return net > 0 ? P.ROUGE_PROPRE[n] : net < 0 ? P.ROUGE_ADVERSE[n] : 1;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Ligne de temps du match : 0 → 45, arrêts de jeu de la 1re période (comptés à 45'),
+  // 45 → 90, arrêts de jeu de la 2e période. À 45', les arrêts de jeu de la 1re période sont écoulés.
+  // ---------------------------------------------------------------------------
+
+  /** Pas de calcul du temps restant à partir de `minute` : [{ dt, f }]. */
+  function tempsRestant(minute, arrets2) {
+    const pas = [];
+    const regulier = (a, b) => {
+      if (b - a < 1e-9) return;
+      const n = Math.ceil((b - a) / P.PAS);
+      const dt = (b - a) / n;
+      for (let k = 0; k < n; k++) pas.push({ dt, f: intensite(a + (k + 0.5) * dt) });
+    };
+    const arret = (duree, ancre) => {
+      const n = Math.ceil(duree / P.PAS);
+      for (let k = 0; k < n; k++) pas.push({ dt: duree / n, f: intensite(ancre) });
+    };
+    if (minute < 45) {
+      regulier(minute, 45);
+      arret(P.ARRETS_1, 45);
+    }
+    if (minute < 90) regulier(Math.max(minute, 45), 90);
+    arret(minute < 90 ? arrets2 : Math.max(arrets2 - (minute - 90), P.DUREE_MIN), 90);
+    return pas;
+  }
+
+  /** Pas de calcul du temps déjà joué, du coup d'envoi à `minute` : [{ t0, dt, f }]. */
+  function tempsEcoule(minute) {
+    const pas = [];
+    const regulier = (a, b) => {
+      if (b - a < 1e-9) return;
+      const n = Math.ceil((b - a) / P.PAS);
+      const dt = (b - a) / n;
+      for (let k = 0; k < n; k++) pas.push({ t0: a + k * dt, dt, f: intensite(a + (k + 0.5) * dt) });
+    };
+    const arret = (duree, ancre, t0Fixe) => {
+      const n = Math.ceil(duree / P.PAS);
+      const dt = duree / n;
+      for (let k = 0; k < n; k++) pas.push({ t0: t0Fixe === null ? ancre + k * dt : t0Fixe, dt, f: intensite(ancre) });
+    };
+    regulier(0, Math.min(minute, 45));
+    if (minute >= 45) arret(P.ARRETS_1, 45, 45 - 1e-6);
+    if (minute > 45) regulier(45, Math.min(minute, 90));
+    if (minute > 90) arret(minute - 90, 90, null);
+    return pas;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Normalisation : « buts par match » garde son sens
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Coefficient qui fait que, pour des équipes de référence, le nombre de buts attendus au coup d'envoi
+   * (en tenant compte du score qui évolue) est bien égal aux buts attendus donnés (lamA + lamB).
+   */
+  let kappaMemo = null;
+  function kappa() {
+    if (kappaMemo !== null) return kappaMemo;
+    const ref = { lamA: 1.45, lamB: 1.15 };
+    const sansEtat = { butsA: 0, butsB: 0, rougesA: 0, rougesB: 0 };
+    let k = 1;
+    for (let i = 0; i < 8; i++) {
+      const { p, C } = derouler(ref, sansEtat, 0, 1, 1, k);
+      let total = 0;
+      for (let a = 0; a < C; a++) for (let b = 0; b < C; b++) total += (a + b) * p[a * C + b];
+      k *= (ref.lamA + ref.lamB) / total;
+    }
+    kappaMemo = k;
+    return k;
+  }
+
+  /** À appeler après avoir modifié PARAMS (tests, validation) : recalcule la normalisation. */
+  function recalibrer() {
+    kappaMemo = null;
+    return kappa();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Niveau du jour d'après les tirs
+  // ---------------------------------------------------------------------------
 
   /** Buts attendus de chaque équipe depuis le coup d'envoi jusqu'à `minute`, selon l'état réel du match. */
   function butsAttendusJusqua(forces, evenements, minute) {
     const tries = evenements.filter((v) => v.t === 'but' || v.t === 'rouge').sort((x, y) => x.min - y.min);
     const total = { A: 0, B: 0 };
-    if (minute <= 0) return total;
-    const n = Math.ceil(minute / P.PAS);
-    const dt = minute / n;
     const etat = { butsA: 0, butsB: 0, rougesA: 0, rougesB: 0 };
+    const k = kappa();
     let i = 0;
-    for (let k = 0; k < n; k++) {
-      const t0 = k * dt;
-      while (i < tries.length && tries[i].min <= t0) {
+    for (const pas of tempsEcoule(minute)) {
+      while (i < tries.length && tries[i].min <= pas.t0) {
         const v = tries[i++];
         etat[(v.t === 'but' ? 'buts' : 'rouges') + v.eq] += 1;
       }
-      const f = intensite(t0 + dt / 2) / NORME;
       const ecart = etat.butsA - etat.butsB;
-      total.A += forces.lamA * f * multEcart(ecart) * multRouges(etat.rougesA, etat.rougesB) * dt;
-      total.B += forces.lamB * f * multEcart(-ecart) * multRouges(etat.rougesB, etat.rougesA) * dt;
+      total.A += forces.lamA * k * pas.f * multScore(ecart) * multRouges(etat.rougesA, etat.rougesB) * pas.dt;
+      total.B += forces.lamB * k * pas.f * multScore(-ecart) * multRouges(etat.rougesB, etat.rougesA) * pas.dt;
     }
     return total;
   }
@@ -183,11 +270,12 @@
   function performances(forces, evenements, minute) {
     const attendu = butsAttendusJusqua(forces, evenements, minute);
     const s = etatA(evenements, minute);
-    const xg = (cadres, buts, hors) => P.XG_CADRE * Math.max(cadres, buts) + P.XG_HORS * hors; // un but est au moins un tir cadré
-    const mult = (x, att) => bornes((P.CONFIANCE_AVANT_MATCH + x) / (P.CONFIANCE_AVANT_MATCH + att), P.PERF_MIN, P.PERF_MAX);
+    // Un but est au moins un tir cadré : saisir le but et le tir ne compte pas deux fois.
+    const evidence = (cadres, buts, hors) => P.POIDS_TIR * (Math.max(cadres, buts) + hors);
+    const mult = (x, att) => bornes((P.CONFIANCE + x) / (P.CONFIANCE + att), P.PERF_MIN, P.PERF_MAX);
     return {
-      perfA: mult(xg(s.cadresA, s.butsA, s.horsA), attendu.A),
-      perfB: mult(xg(s.cadresB, s.butsB, s.horsB), attendu.B),
+      perfA: mult(evidence(s.cadresA, s.butsA, s.horsA), attendu.A),
+      perfB: mult(evidence(s.cadresB, s.butsB, s.horsB), attendu.B),
     };
   }
 
@@ -200,10 +288,8 @@
    * Renvoie la matrice p[a][b] (probabilité que A marque a buts et B b buts d'ici la fin)
    * ainsi que la probabilité que le prochain but soit pour A ou pour B.
    */
-  function derouler(forces, etat, minute, perfA = 1, perfB = 1) {
-    const reste = Math.max(P.FIN - minute, P.DUREE_MIN);
-    const n = Math.ceil(reste / P.PAS);
-    const dt = reste / n;
+  function derouler(forces, etat, minute, perfA = 1, perfB = 1, kap = null) {
+    const pasRestants = tempsRestant(minute, forces.arrets2 === undefined ? P.ARRETS_2 : forces.arrets2);
     const C = P.PLAFOND + 1;
     let cour = new Float64Array(C * C);
     let suiv = new Float64Array(C * C);
@@ -211,26 +297,26 @@
     let prochainA = 0;
     let prochainB = 0;
 
-    const baseA = (forces.lamA * perfA) / NORME;
-    const baseB = (forces.lamB * perfB) / NORME;
+    const k = kap === null ? kappa() : kap;
+    const baseA = forces.lamA * perfA * k;
+    const baseB = forces.lamB * perfB * k;
     const rA = multRouges(etat.rougesA, etat.rougesB);
     const rB = multRouges(etat.rougesB, etat.rougesA);
     const ecart0 = etat.butsA - etat.butsB;
-    const gA = new Float64Array(7); // probabilité qu'A marque pendant un pas, selon l'écart (-3 à +3)
-    const gB = new Float64Array(7);
+    const gA = new Float64Array(5); // probabilité qu'A marque pendant un pas, selon l'écart (-2 à +2 ou plus)
+    const gB = new Float64Array(5);
 
-    for (let k = 0; k < n; k++) {
-      const f = intensite(minute + (k + 0.5) * dt);
-      for (let e = -3; e <= 3; e++) {
-        gA[e + 3] = 1 - Math.exp(-baseA * f * rA * multEcart(e) * dt);
-        gB[e + 3] = 1 - Math.exp(-baseB * f * rB * multEcart(-e) * dt);
+    for (const { dt, f } of pasRestants) {
+      for (let e = -2; e <= 2; e++) {
+        gA[e + 2] = 1 - Math.exp(-baseA * f * rA * multScore(e) * dt);
+        gB[e + 2] = 1 - Math.exp(-baseB * f * rB * multScore(-e) * dt);
       }
       suiv.fill(0);
       for (let a = 0; a < C; a++) {
         for (let b = 0; b < C; b++) {
           const p = cour[a * C + b];
           if (p < 1e-14) continue;
-          const idx = bornes(ecart0 + a - b, -3, 3) + 3;
+          const idx = bornes(ecart0 + a - b, -2, 2) + 2;
           const pa = gA[idx];
           const pb = gB[idx];
           const aSuiv = Math.min(a + 1, C - 1);
@@ -285,13 +371,15 @@
         prochainA: 0, prochainB: 0, aucunBut: 1, resteA: 0, resteB: 0,
         scores: [{ a: etat.butsA, b: etat.butsB, p: 1 }],
         plus25: etat.butsA + etat.butsB >= 3 ? 1 : 0,
+        plusDe: Array.from({ length: 9 }, (_, k) => (etat.butsA + etat.butsB >= k ? 1 : 0)),
         perfA: 1, perfB: 1,
       };
     }
 
     const { perfA, perfB } = performances(forces, evenements, minute);
     const { p, C, prochainA, prochainB } = derouler(forces, etat, minute, perfA, perfB);
-    let pA = 0, pN = 0, pB = 0, resteA = 0, resteB = 0, plus25 = 0;
+    let pA = 0, pN = 0, pB = 0, resteA = 0, resteB = 0;
+    const totaux = new Float64Array(etat.butsA + etat.butsB + 2 * C); // totaux[t] = probabilité de finir avec t buts au total
     const scores = [];
     for (let a = 0; a < C; a++) {
       for (let b = 0; b < C; b++) {
@@ -301,19 +389,26 @@
         if (d > 0) pA += q; else if (d === 0) pN += q; else pB += q;
         resteA += a * q;
         resteB += b * q;
-        if (etat.butsA + etat.butsB + a + b >= 3) plus25 += q;
+        totaux[etat.butsA + etat.butsB + a + b] += q;
         scores.push({ a: etat.butsA + a, b: etat.butsB + b, p: q });
       }
     }
     scores.sort((x, y) => y.p - x.p);
     const somme = pA + pN + pB; // proche de 1 : la troncature à PLAFOND buts est négligeable
+    // plusDe[k] = probabilité que le match compte au moins k buts au total (score actuel compris)
+    const plusDe = Array.from({ length: 9 }, (_, k) => {
+      let moins = 0;
+      for (let t = 0; t < k && t < totaux.length; t++) moins += totaux[t];
+      return Math.min(1, Math.max(0, 1 - moins / somme));
+    });
     return {
       etat, minute, termine: false,
       pA: pA / somme, pN: pN / somme, pB: pB / somme,
       prochainA, prochainB, aucunBut: Math.max(0, 1 - prochainA - prochainB),
       resteA, resteB,
       scores: scores.slice(0, 5),
-      plus25: plus25 / somme,
+      plus25: plusDe[3],
+      plusDe,
       perfA, perfB,
     };
   }
@@ -326,7 +421,7 @@
   function serie(forces, evenements, jusqua, cache = new Map(), fin = null) {
     const points = [];
     const tri = evenements.slice().sort((x, y) => x.min - y.min);
-    const cleForces = forces.lamA.toFixed(5) + '/' + forces.lamB.toFixed(5);
+    const cleForces = forces.lamA.toFixed(5) + '/' + forces.lamB.toFixed(5) + '/' + (forces.arrets2 === undefined ? '' : forces.arrets2);
     for (let m = 0; m <= jusqua; m++) {
       const termine = fin !== null && m >= fin;
       const passes = tri.filter((v) => v.min <= m);
@@ -340,6 +435,30 @@
       points.push(pt);
     }
     return points;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Comparaison avec les cotes d'un bookmaker
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Compare la probabilité du modèle à une cote décimale.
+   * `incertitude` : points de probabilité retirés au modèle par prudence (le modèle peut se tromper).
+   * Renvoie la probabilité implicite de la cote, l'espérance de gain par unité misée avec et sans prudence,
+   * et une mise prudente (quart de Kelly, plafonnée) en part du capital.
+   */
+  function comparerCote(probaModele, cote, incertitude = 0.05) {
+    if (!(cote > 1) || !Number.isFinite(probaModele)) return null;
+    const implicite = 1 / cote;
+    const prudente = Math.max(0, probaModele - incertitude);
+    const esperance = probaModele * cote - 1;
+    const esperancePrudente = prudente * cote - 1;
+    const kelly = esperancePrudente > 0 ? esperancePrudente / (cote - 1) : 0; // fraction de Kelly sur la proba prudente
+    return {
+      implicite, prudente, esperance, esperancePrudente,
+      miseConseillee: Math.min(0.02, kelly / 4), // quart de Kelly, jamais plus de 2 % du capital
+      ecart: probaModele - implicite,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -379,20 +498,23 @@
   function simulerMinute(forces, evenements, minute, alea, niveauDuJour) {
     const etat = etatA(evenements, minute - 1);
     const ecart = etat.butsA - etat.butsB;
-    const f = intensite(minute - 0.5) / NORME;
+    const f = intensite(minute - 0.5);
+    const k = kappa();
     const taux = {
-      A: forces.lamA * f * niveauDuJour.A * multEcart(ecart) * multRouges(etat.rougesA, etat.rougesB),
-      B: forces.lamB * f * niveauDuJour.B * multEcart(-ecart) * multRouges(etat.rougesB, etat.rougesA),
+      A: forces.lamA * k * f * niveauDuJour.A * multScore(ecart) * multRouges(etat.rougesA, etat.rougesB),
+      B: forces.lamB * k * f * niveauDuJour.B * multScore(-ecart) * multRouges(etat.rougesB, etat.rougesA),
     };
     const nouveaux = [];
     for (const eq of ['A', 'B']) {
-      const tirsCadres = poisson(taux[eq] / P.XG_CADRE, alea);
-      for (let i = 0; i < tirsCadres; i++) {
-        nouveaux.push({ t: alea() < P.XG_CADRE ? 'but' : 'cadre', eq, min: minute });
+      // Tirs au rythme taux / POIDS_TIR ; chacun est un but avec la probabilité POIDS_TIR (le taux de buts est donc respecté)
+      const tirs = poisson(taux[eq] / P.POIDS_TIR, alea);
+      for (let i = 0; i < tirs; i++) {
+        const u = alea();
+        if (u < P.POIDS_TIR) nouveaux.push({ t: 'but', eq, min: minute }, { t: 'cadre', eq, min: minute });
+        else if (u < P.TIRS_CADRES) nouveaux.push({ t: 'cadre', eq, min: minute });
+        else nouveaux.push({ t: 'hors', eq, min: minute });
       }
-      const tirsHors = poisson((P.HORS_PAR_CADRE * taux[eq]) / P.XG_CADRE, alea);
-      for (let i = 0; i < tirsHors; i++) nouveaux.push({ t: 'hors', eq, min: minute });
-      if (alea() < P.ROUGE_PAR_MATCH / P.FIN) nouveaux.push({ t: 'rouge', eq, min: minute });
+      if (alea() < P.ROUGE_PAR_MATCH / (90 + P.ARRETS_2)) nouveaux.push({ t: 'rouge', eq, min: minute });
     }
     return nouveaux;
   }
@@ -400,7 +522,7 @@
   return {
     PARAMS: P,
     forcesDepuisNiveaux, forcesDepuisCotes, probasDepuisCotes, libelleNiveau,
-    etatA, prevoir, serie, probasInitiales,
+    etatA, prevoir, serie, probasInitiales, kappa, recalibrer, comparerCote,
     generateur, niveauxDuJour, simulerMinute,
   };
 });

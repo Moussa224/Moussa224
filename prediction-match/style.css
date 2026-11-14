@@ -27,6 +27,10 @@
   --nul: #898781;
   --sur-serie: #ffffff;
   --rouge: #d03b3b;
+  --bon: #0ca30c;
+  --bon-texte: #006300;
+  --attention: #fab219;
+  --attention-icone: #a36b00;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -44,6 +48,8 @@
     --sur-action: #1a1a19;
     --eq-a: #3987e5;
     --eq-b: #d95926;
+    --bon-texte: #0ca30c;
+    --attention-icone: #fab219;
     color-scheme: dark;
   }
 }
@@ -61,6 +67,8 @@
   --sur-action: #1a1a19;
   --eq-a: #3987e5;
   --eq-b: #d95926;
+  --bon-texte: #0ca30c;
+  --attention-icone: #fab219;
   color-scheme: dark;
 }
 
@@ -72,6 +80,10 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 body {
@@ -685,6 +697,127 @@ select.saisie {
   margin-top: 12px;
   color: var(--encre-3);
   font-size: 0.86rem;
+}
+
+/* ------------------------------------------------------------------ comparaison avec les cotes */
+
+.reglage-paris {
+  margin-top: 14px;
+}
+.paris {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pari {
+  padding: 12px 0;
+  border-top: 1px solid var(--filet);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pari-tete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.pari-nom {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pari-proba {
+  font-family: var(--police-chiffres);
+  font-weight: 700;
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.pari-corps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+.pari-cote {
+  display: block;
+  width: 92px;
+}
+.pari-cote .saisie {
+  min-height: 38px;
+}
+.pari-min {
+  color: var(--encre-2);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+.verdict {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--axe);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--encre-2);
+  white-space: nowrap;
+}
+.verdict svg {
+  width: 14px;
+  height: 14px;
+}
+.verdict--valeur {
+  border-color: var(--bon);
+  color: var(--bon-texte);
+}
+.verdict--suspect {
+  border-color: var(--attention);
+  color: var(--encre);
+}
+.verdict--suspect svg {
+  color: var(--attention-icone);
+}
+.verdict--vide {
+  display: none;
+}
+.pari-detail {
+  color: var(--encre-2);
+  font-size: 0.9rem;
+  max-width: 68ch;
+}
+.synthese-paris {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--creux);
+  color: var(--encre-2);
+  font-size: 0.94rem;
+}
+.avertissement {
+  margin-top: 12px;
+  color: var(--encre-3);
+  font-size: 0.86rem;
+  max-width: 72ch;
+}
+.table-fiabilite {
+  border-collapse: collapse;
+  min-width: 220px;
+  font-variant-numeric: tabular-nums;
+}
+.table-fiabilite th,
+.table-fiabilite td {
+  padding: 4px 14px 4px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--grille);
+}
+.table-fiabilite th {
+  color: var(--encre);
+  font-weight: 600;
 }
 
 /* ------------------------------------------------------------------ graphique */

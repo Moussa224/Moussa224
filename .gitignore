@@ -5,3 +5,6 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+
+# Données téléchargées par prediction-match/validation
+prediction-match/validation/donnees/
