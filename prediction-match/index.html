@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Prédicteur de match</title>
+  <meta name="description" content="Chances de victoire de chaque équipe pendant un match de football, recalculées à chaque but, tir ou carton rouge.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232a78d6'/%3E%3Cpath d='M10 46 L24 30 L34 38 L54 16' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <noscript>Merci d'activer JavaScript pour utiliser le prédicteur.</noscript>
+
+  <main class="app">
+    <header class="entete">
+      <h1>Prédicteur de match</h1>
+      <p>Les chances de victoire de chaque équipe, recalculées à chaque but, tir ou carton rouge que vous saisissez.</p>
+    </header>
+
+    <div id="bandeau" class="bandeau" role="status" hidden></div>
+
+    <!-- ============ Match en cours et prévision ============ -->
+    <section class="carte" aria-label="Match en cours">
+      <div class="ligne-score">
+        <div class="equipe">
+          <span class="pastille pastille--a" aria-hidden="true"></span>
+          <input id="nom-a" class="champ-nom" type="text" maxlength="24" autocomplete="off" aria-label="Nom de l'équipe A" placeholder="Équipe A">
+        </div>
+        <div class="score" id="score" aria-live="polite">0 – 0</div>
+        <div class="equipe equipe--b">
+          <span class="pastille pastille--b" aria-hidden="true"></span>
+          <input id="nom-b" class="champ-nom" type="text" maxlength="24" autocomplete="off" aria-label="Nom de l'équipe B" placeholder="Équipe B">
+        </div>
+      </div>
+
+      <div class="temps" id="zone-temps">
+        <div class="minute" id="minute-affichee">0'</div>
+        <input id="minute" class="curseur" type="range" min="0" max="100" step="1" value="0" aria-label="Minute de jeu">
+        <div class="boutons-temps">
+          <button type="button" class="btn btn--icone" id="minute-moins" aria-label="Reculer d'une minute">−</button>
+          <button type="button" class="btn btn--icone" id="minute-plus" aria-label="Avancer d'une minute">+</button>
+          <button type="button" class="btn" id="chrono" aria-pressed="false" title="Fait avancer la minute en temps réel"></button>
+        </div>
+      </div>
+      <p class="note" id="note-relecture" hidden></p>
+
+      <div class="prevision" aria-live="polite">
+        <p class="etiquette" id="prev-etiquette">Prévision</p>
+        <p class="hero">
+          <span class="hero-chiffre" id="hero-chiffre">–</span>
+          <span class="hero-texte" id="hero-texte"></span>
+        </p>
+        <div class="segments" id="segments" role="img" aria-label="Répartition des chances"></div>
+        <ul class="legende" id="legende"></ul>
+      </div>
+
+      <div class="actions" id="zone-actions">
+        <button type="button" class="btn" id="btn-nouveau">Nouveau match</button>
+        <button type="button" class="btn" id="btn-sifflet">Coup de sifflet final</button>
+        <button type="button" class="btn" id="btn-simuler">Simuler un match</button>
+      </div>
+    </section>
+
+    <!-- ============ Niveau des équipes ============ -->
+    <details class="carte reglages" id="reglages">
+      <summary>
+        <h2 class="titre-bloc">Niveau des équipes</h2>
+        <span class="resume" id="reglages-resume"></span>
+      </summary>
+      <div class="reglages-corps" id="zone-reglages">
+        <div class="choix" role="radiogroup" aria-label="Comment indiquer le niveau des équipes">
+          <label><input type="radio" name="mode" value="elo" checked><span>Niveau (Elo)</span></label>
+          <label><input type="radio" name="mode" value="cotes"><span>Cotes du bookmaker</span></label>
+        </div>
+
+        <div id="reglage-elo" class="sous-reglage">
+          <div class="grille-2">
+            <div class="champ">
+              <label class="champ-tete" for="niveau-a"><span id="lib-niveau-a">Équipe A</span><output id="val-niveau-a" for="niveau-a"></output></label>
+              <input id="niveau-a" class="glissiere" type="range" min="1200" max="2100" step="10" value="1760">
+            </div>
+            <div class="champ">
+              <label class="champ-tete" for="niveau-b"><span id="lib-niveau-b">Équipe B</span><output id="val-niveau-b" for="niveau-b"></output></label>
+              <input id="niveau-b" class="glissiere" type="range" min="1200" max="2100" step="10" value="1660">
+            </div>
+          </div>
+          <p class="champ-aide">Échelle Elo : 100 points d'écart donnent environ 64 % de chances d'obtenir un résultat favorable au mieux classé (un nul compte pour moitié).</p>
+          <div class="grille-2">
+            <div class="champ">
+              <label class="champ-tete" for="terrain">Terrain</label>
+              <select id="terrain" class="saisie">
+                <option value="A">L'équipe A joue à domicile</option>
+                <option value="N">Terrain neutre</option>
+                <option value="B">L'équipe B joue à domicile</option>
+              </select>
+            </div>
+            <div class="champ">
+              <label class="champ-tete" for="buts-moyens"><span>Buts par match en moyenne</span><output id="val-buts-moyens" for="buts-moyens"></output></label>
+              <input id="buts-moyens" class="glissiere" type="range" min="1.8" max="3.6" step="0.1" value="2.6">
+              <span class="champ-aide">Plus haut pour un championnat ou un duel offensif.</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="reglage-cotes" class="sous-reglage" hidden>
+          <div class="cotes">
+            <div class="champ">
+              <label class="champ-tete" for="cote-a"><span id="lib-cote-a">Victoire A</span></label>
+              <input id="cote-a" class="saisie" type="text" inputmode="decimal" autocomplete="off" placeholder="2,10">
+            </div>
+            <div class="champ">
+              <label class="champ-tete" for="cote-n">Match nul</label>
+              <input id="cote-n" class="saisie" type="text" inputmode="decimal" autocomplete="off" placeholder="3,40">
+            </div>
+            <div class="champ">
+              <label class="champ-tete" for="cote-b"><span id="lib-cote-b">Victoire B</span></label>
+              <input id="cote-b" class="saisie" type="text" inputmode="decimal" autocomplete="off" placeholder="3,60">
+            </div>
+          </div>
+          <p class="champ-aide">Cotes décimales avant le match (par exemple 2,10 / 3,40 / 3,60). La marge du bookmaker est retirée avant le calcul.</p>
+          <p class="alerte" id="alerte-cotes" role="alert" hidden></p>
+        </div>
+
+        <p class="avant-match" id="avant-match"></p>
+      </div>
+    </details>
+
+    <!-- ============ Événements ============ -->
+    <section class="carte" aria-labelledby="t-evts" id="zone-evenements">
+      <h2 id="t-evts">Ce qui se passe sur le terrain</h2>
+      <p class="sous-titre">Chaque ajout est enregistré à la minute affichée plus haut.</p>
+      <div class="evenements-grille" id="evenements-grille"></div>
+      <p class="aide-evenements">Un but compte au moins comme un tir cadré : inutile de saisir les deux. Le bouton − retire le dernier ajout de la ligne.</p>
+    </section>
+
+    <!-- ============ Graphique ============ -->
+    <section class="carte" aria-labelledby="t-graphe">
+      <h2 id="t-graphe">Évolution des chances</h2>
+      <p class="sous-titre">Survolez ou touchez la courbe pour lire une minute précise.</p>
+      <ul class="legende" id="legende-graphe"></ul>
+      <div class="graphe-cadre" id="graphe-cadre">
+        <svg id="graphe" role="img" aria-label="Courbes des chances de victoire au fil du match" tabindex="0"></svg>
+        <div class="infobulle" id="infobulle" hidden></div>
+      </div>
+      <ul class="legende legende-marques" id="legende-marques">
+        <li><span class="marque-but" aria-hidden="true"></span>But</li>
+        <li><span class="marque-rouge" aria-hidden="true"></span>Carton rouge</li>
+      </ul>
+      <details class="tableau-valeurs">
+        <summary>Voir les valeurs en tableau</summary>
+        <div class="defile"><table id="tableau-valeurs"></table></div>
+      </details>
+    </section>
+
+    <!-- ============ Détails ============ -->
+    <section class="carte" aria-labelledby="t-details">
+      <h2 id="t-details">Détail de la prévision</h2>
+      <div class="details-grille">
+        <div class="bloc">
+          <h3 class="titre-bloc">Prochain but</h3>
+          <ul class="liste-barres" id="liste-prochain"></ul>
+        </div>
+        <div class="bloc">
+          <h3 class="titre-bloc">Scores finaux les plus probables</h3>
+          <ul class="liste-barres" id="liste-scores"></ul>
+        </div>
+        <div class="bloc">
+          <h3 class="titre-bloc">D'ici la fin du match</h3>
+          <dl class="chiffres" id="chiffres"></dl>
+          <p class="forme" id="forme"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ À propos ============ -->
+    <details class="carte apropos">
+      <summary>Comment ça marche, et ce que ça ne sait pas faire</summary>
+      <div class="apropos-corps">
+        <p>Chaque équipe marque selon un taux de buts par minute. Le taux de départ vient du niveau des équipes (Elo) ou des cotes que vous saisissez. Il est ensuite corrigé en direct, puis le reste du match est déroulé demi-minute par demi-minute en suivant toutes les suites possibles de buts.</p>
+        <ul>
+          <li><strong>Le temps :</strong> il reste moins de buts à marquer quand le match avance. Les buts sont un peu plus fréquents en seconde période.</li>
+          <li><strong>Le score :</strong> l'équipe qui mène ralentit un peu, celle qui est menée pousse un peu.</li>
+          <li><strong>Les cartons rouges :</strong> l'équipe à dix marque environ 25 % de moins, l'équipe à onze environ 25 % de plus.</li>
+          <li><strong>Les tirs :</strong> beaucoup de tirs cadrés d'un côté laissent penser que cette équipe est meilleure que prévu. L'effet reste modéré, car un seul match apprend peu.</li>
+        </ul>
+        <p><strong>Limites.</strong> Ces réglages sont des ordres de grandeur du football en général, pas des mesures sur votre championnat. L'application ne se connecte à aucun flux de scores : vous saisissez vous-même le niveau des équipes et ce qui se passe. Elle ne connaît ni les blessures, ni la météo, ni la composition des équipes, ni les penalties.</p>
+        <p>Une chance de 80 % veut dire que l'autre issue arrive tout de même une fois sur cinq. C'est un outil d'analyse, pas un conseil de pari.</p>
+      </div>
+    </details>
+  </main>
+
+  <script src="modele.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
